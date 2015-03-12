@@ -18,6 +18,16 @@ paths:
           description: No response was specified
       produces:
         - application/json
+  /v2/:
+    get:
+      summary: Check v2
+      description: "Endpoint to check for V2(.1) registry API"
+      operationId: pierone.core/check-v2
+      responses:
+        "404":
+          description: v2 is not available
+      produces:
+        - application/json
   /v1/search:
     get:
       parameters:

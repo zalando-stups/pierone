@@ -3,6 +3,10 @@
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.json :refer [wrap-json-response]]))
 
+(defn check-v2 [request]
+  {:status 404
+   :body {:message "Registry API v2 is not implemented"}})
+
 (defn index [request]
   {:body {"Welcome" "to Pier One"}})
 
@@ -11,6 +15,15 @@
    :headers {"Content-Type" "application/json"
              "X-Docker-Registry-Version" "0.6.3"}
    :body    "true"})
+
+(defn put-repo [request]
+  {:headers {"X-Docker-Token" "FakeToken"
+             "X-Docker-Endpoints" (get-in request [:headers "host"])}
+   :body {:message "OK"}})
+
+(defn get-image-json [request]
+  {:status 404
+   :body {:message "TODO" :image (get-in request [:parameters "image" request])}})
 
 (def app
   (-> (s1st/swagger-executor)
