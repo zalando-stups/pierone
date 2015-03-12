@@ -1,6 +1,6 @@
-=========================
-Pier One: Docker Registry
-=========================
+=================================
+Pier One - STUPS' Docker Registry
+=================================
 
 .. .. image:: https://travis-ci.org/zalando/ssh-access-granting-service.svg?branch=master
 ..    :target: https://travis-ci.org/zalando/ssh-access-granting-service
