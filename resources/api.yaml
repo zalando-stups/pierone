@@ -4,12 +4,26 @@ info:
   title: Pier One API
   description: Docker Registry
 host: pierone.stups.zalan.do
-basePath: /v1
+basePath: /
 schemes:
   - https
 paths:
-  /search:
+  /:
     get:
+      summary: Index
+      description: "Home page"
+      operationId: pierone.core/index
+      responses:
+        "200":
+          description: No response was specified
+      produces:
+        - application/json
+  /v1/search:
+    get:
+      parameters:
+        - name: q
+          in: query
+          type: string
       responses:
         "200":
           description: No response was specified
@@ -18,13 +32,17 @@ paths:
       operationId: pierone.core/search
       produces:
         - application/json
-  /repositories/{repo1}/{repo2}/tags:
+  /v1/repositories/{repo1}/{repo2}/tags:
     get:
       parameters:
         - name: repo1
           in: path
+          type: string
+          required: true
         - name: repo2
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -33,15 +51,21 @@ paths:
       operationId: pierone.core/get-tags
       produces:
         - application/json
-  /repositories/{repo1}/{repo2}/tags/{tag}:
+  /v1/repositories/{repo1}/{repo2}/tags/{tag}:
     put:
       parameters:
         - name: repo1
           in: path
+          type: string
+          required: true
         - name: repo2
           in: path
+          type: string
+          required: true
         - name: tag
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -50,13 +74,17 @@ paths:
       operationId: pierone.core/put-tag
       produces:
         - application/json
-  /repositories/{repo1}/{repo2}/:
+  /v1/repositories/{repo1}/{repo2}/:
     put:
       parameters:
         - name: repo1
           in: path
+          type: string
+          required: true
         - name: repo2
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -65,14 +93,18 @@ paths:
       operationId: pierone.core/put-repo
       produces:
         - application/json
-  
-  /repositories/{repo1}/{repo2}/images:
+
+  /v1/repositories/{repo1}/{repo2}/images:
     put:
       parameters:
         - name: repo1
           in: path
+          type: string
+          required: true
         - name: repo2
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -85,8 +117,12 @@ paths:
       parameters:
         - name: repo1
           in: path
+          type: string
+          required: true
         - name: repo2
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -95,11 +131,13 @@ paths:
       operationId: pierone.core/get-images
       produces:
         - application/json
-  /images/{image}/json:
+  /v1/images/{image}/json:
     put:
       parameters:
         - name: image
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -112,7 +150,9 @@ paths:
       parameters:
         - name: image
           in: path
-      
+          type: string
+          required: true
+
       responses:
         "200":
           description: No response was specified
@@ -121,11 +161,13 @@ paths:
       operationId: pierone.core/get-image-json
       produces:
         - application/json
-  /images/{image}/layer:
+  /v1/images/{image}/layer:
     put:
       parameters:
         - name: image
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -138,6 +180,8 @@ paths:
       parameters:
         - name: image
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -146,11 +190,13 @@ paths:
       operationId: pierone.core/get-image-layer
       produces:
         - application/json
-  /images/{image}/checksum:
+  /v1/images/{image}/checksum:
     put:
       parameters:
         - name: image
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -159,11 +205,13 @@ paths:
       operationId: pierone.core/put-image-checksum
       produces:
         - application/json
-  /images/{image}/ancestry:
+  /v1/images/{image}/ancestry:
     get:
       parameters:
         - name: image
           in: path
+          type: string
+          required: true
       responses:
         "200":
           description: No response was specified
@@ -172,7 +220,7 @@ paths:
       operationId: pierone.core/get-image-ancestry
       produces:
         - application/json
-  /_ping:
+  /v1/_ping:
     get:
       responses:
         "200":

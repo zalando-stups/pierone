@@ -7,7 +7,8 @@
             :min-lein-version "2.0.0"
             :dependencies [[org.clojure/clojure "1.6.0"]
                            [ring "1.3.2"]
-                           [io.sarnowski/swagger1st "0.1.0-SNAPSHOT"]]
+                           [io.sarnowski/swagger1st "0.2.0"]
+                           [ring/ring-json "0.3.1"]]
             :plugins [
                       [lein-ring "0.9.2"]]
 
