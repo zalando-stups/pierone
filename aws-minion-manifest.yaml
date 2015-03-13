@@ -1,0 +1,4 @@
+application_name: pierone
+team_name: stups
+exposed_ports: [8080]
+health_check_http_path: /v1/_ping

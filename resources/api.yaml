@@ -1,6 +1,6 @@
 swagger: "2.0"
 info:
-  version: beta
+  version: "1.0"
   title: Pier One API
   description: Docker Registry
 host: pierone.stups.zalan.do

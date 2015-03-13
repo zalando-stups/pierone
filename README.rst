@@ -10,7 +10,7 @@ Pier One - STUPS' Docker Registry
 ..    :target: https://coveralls.io/r/zalando/ssh-access-granting-service
 ..    :alt: Coveralls status
 
-Docker registry.
+Docker registry with immutable tags, repo permissions, S3 backend and OAuth.
 
 Development
 ===========
@@ -23,6 +23,17 @@ To start a web server for the application, run:
 
     $ lein ring server
 
+The web server will run on port 3000.
+
+Testing
+=======
+
+.. code-block:: bash
+
+    $ docker pull busybox
+    $ docker tag busybox localhost:3000/example/foobar:1.0
+    $ docker push localhost:3000/example/foobar:1.0
+    $ docker pull localhost:3000/example/foobar:1.0
 
 
 .. _Leiningen: http://leiningen.org/

@@ -8,7 +8,9 @@
             :dependencies [[org.clojure/clojure "1.6.0"]
                            [ring "1.3.2"]
                            [io.sarnowski/swagger1st "0.2.0"]
-                           [ring/ring-json "0.3.1"]]
+                           [ring/ring-json "0.3.1"]
+                           [environ "1.0.0"]
+                           [commons-io/commons-io "2.4"]]
             :plugins [
                       [lein-ring "0.9.2"]]
 
