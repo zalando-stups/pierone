@@ -11,7 +11,9 @@
                            [ring/ring-json "0.3.1"]
                            [environ "1.0.0"]
                            [commons-io/commons-io "2.4"]
-                           [org.clojure/data.json "0.2.5"] ]
+                           [org.clojure/data.json "0.2.5"]
+                           ; amazon aws (if upgrading, also check the joda-time version)
+                           [amazonica "0.3.19"]]
             :plugins [[lein-cloverage "1.0.2"]
                       [lein-ring "0.9.2"]]
 
