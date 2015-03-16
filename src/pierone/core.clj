@@ -94,11 +94,13 @@
     (json-response "OK")))
 
 (defn get-image-layer [request]
-  (let [image-id (get-in request [:parameters :path :image])]
-    (-> (response (get-object (str image-id ".layer")))
-        (content-type "application/octect-stream")
-        )
-    ))
+  (let [image-id (get-in request [:parameters :path :image])
+        bytes (get-object (str image-id ".layer"))]
+    (if bytes
+        (-> (response bytes)
+            (content-type "application/octect-stream"))
+        (-> (response "Layer not found")
+            (status 404)))))
 
 (defn put-image-checksum [request]
   (json-response "OK"))

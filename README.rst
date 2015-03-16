@@ -28,6 +28,12 @@ The web server will run on port 3000.
 Testing
 =======
 
+Running unit tests with code coverage report:
+
+.. code-block:: bash
+
+    $ lein cloverage
+
 .. code-block:: bash
 
     $ docker pull busybox
@@ -35,5 +41,12 @@ Testing
     $ docker push localhost:3000/example/foobar:1.0
     $ docker pull localhost:3000/example/foobar:1.0
 
+Building
+========
+
+.. code-block:: bash
+
+    $ lein ring uberjar
+    $ docker build -t stups/pierone .
 
 .. _Leiningen: http://leiningen.org/

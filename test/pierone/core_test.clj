@@ -1,7 +1,8 @@
 (ns pierone.core-test    (:require
                          [clojure.test :refer :all]
                          [pierone.core :refer :all]
-                         [ring.mock.request :as mock] ))
+                         [ring.mock.request :as mock]
+                         [clojure.data.json :as json]))
 
 (deftest test-index
   (is (= 200 (:status (index {})))))
@@ -37,11 +38,21 @@
   (is (= "{}" (:body (with-redefs [get-object (constantly (.getBytes "{}"))]
                                       (app (mock/request :get "/v1/images/123/json")))))))
 
+(deftest test-app-put-image-json
+
+  (is (= 200 (:status (app (-> (mock/request :put "/v1/images/foobar/json")
+                               (mock/header "Content-Type" "application/json")
+                               (assoc :body (json/write-str {:test "test"}))))))))
+
 (defn- get-mock-image-json-object [path]
   (-> (get {"123.json" "{\"parent\":\"456\"}"
             "456.json" "{}"} path)
       (.getBytes)))
 
+(defn- get-mock-image-layer-object [path]
+  (-> (get {"123.layer" "foobar"
+            "456.layer" "blubber"} path)
+      (.getBytes)))
 
 (deftest test-app-get-ancestry
 
@@ -49,3 +60,36 @@
 
   (is (= "[\"123\",\"456\"]" (:body (with-redefs [get-object get-mock-image-json-object]
                        (app (mock/request :get "/v1/images/123/ancestry")))))))
+
+
+(deftest test-app-get-layer
+
+  (is (= 404 (:status (app (mock/request :get "/v1/images/nonexisting/layer")))))
+
+  (is (= "foobar" (-> (with-redefs [get-object get-mock-image-layer-object]
+                                      (app (mock/request :get "/v1/images/123/layer")))
+                      :body
+                      String.))))
+
+(deftest test-app-put-layer
+
+  (is (= 200 (:status (app (-> (mock/request :put "/v1/images/foobar/layer")
+                               (mock/body "test")))))))
+
+(deftest test-app-put-images
+
+  (is (= 204 (:status (app (-> (mock/request :put "/v1/repositories/foo/bar/images")
+                               (assoc :body "[]")))))))
+
+(deftest test-app-put-tag
+
+  (is (= 200 (:status (with-redefs [get-object (constantly nil)]
+                        (app (-> (mock/request :put "/v1/repositories/foo/bar/tags/1.0")
+                                 (assoc :body "\"123\"")))))))
+
+  (is (= 409 (:status (with-redefs [get-object (constantly (.getBytes "\"123\""))]
+                                      (app (-> (mock/request :put "/v1/repositories/foo/bar/tags/1.0")
+                                               (assoc :body "\"123\""))))))))
+
+(deftest test-put-checksum
+  (is (= 200 (:status (put-image-checksum {})))))

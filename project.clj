@@ -10,7 +10,8 @@
                            [io.sarnowski/swagger1st "0.3.0"]
                            [ring/ring-json "0.3.1"]
                            [environ "1.0.0"]
-                           [commons-io/commons-io "2.4"]]
+                           [commons-io/commons-io "2.4"]
+                           [org.clojure/data.json "0.2.5"] ]
             :plugins [[lein-cloverage "1.0.2"]
                       [lein-ring "0.9.2"]]
 
