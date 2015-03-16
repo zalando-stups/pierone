@@ -17,7 +17,7 @@ paths:
         "200":
           description: No response was specified
       produces:
-        - application/json
+        - text/html
   /v2/:
     get:
       summary: Check v2
@@ -55,7 +55,7 @@ paths:
           required: true
       responses:
         "200":
-          description: No response was specified
+          description: Map of tags to image IDs
         "404":
           description: Repository/tags not found
       description: ""
@@ -80,7 +80,9 @@ paths:
           required: true
       responses:
         "200":
-          description: No response was specified
+          description: Tag was stored successfully
+        "409":
+          description: Tag already exists
       description: ""
       summary: Put Tag
       operationId: pierone.core/put-tag
@@ -152,7 +154,7 @@ paths:
           required: true
       responses:
         "200":
-          description: No response was specified
+          description: Image JSON was stored successfully
       description: ""
       summary: Put Image JSON
       operationId: pierone.core/put-image-json
@@ -184,7 +186,7 @@ paths:
           required: true
       responses:
         "200":
-          description: No response was specified
+          description: Image layer data was stored successfully
       description: ""
       summary: Put Image Layer
       operationId: pierone.core/put-image-layer
@@ -230,7 +232,7 @@ paths:
           required: true
       responses:
         "200":
-          description: No response was specified
+          description: Return list of image IDs
         "404":
           description: Image ID does not exist
       description: ""
