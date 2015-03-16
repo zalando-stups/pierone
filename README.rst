@@ -2,13 +2,13 @@
 Pier One - STUPS' Docker Registry
 =================================
 
-.. .. image:: https://travis-ci.org/zalando/ssh-access-granting-service.svg?branch=master
-..    :target: https://travis-ci.org/zalando/ssh-access-granting-service
-..    :alt: Travis CI build status
-..
-.. .. image:: https://coveralls.io/repos/zalando/ssh-access-granting-service/badge.svg
-..    :target: https://coveralls.io/r/zalando/ssh-access-granting-service
-..    :alt: Coveralls status
+.. image:: https://travis-ci.org/zalando-stups/pierone.svg?branch=master
+   :target: https://travis-ci.org/zalando-stups/pierone
+   :alt: Travis CI build status
+
+.. image:: https://coveralls.io/repos/zalando-stups/pierone/badge.svg
+   :target: https://coveralls.io/r/zalando-stups/pierone
+   :alt: Coveralls status
 
 Docker registry with immutable tags, repo permissions, S3 backend and OAuth.
 
