@@ -74,10 +74,10 @@
   (let [image-id (get-in request [:parameters :path :image])
         bytes (get-object (str image-id ".layer"))]
     (if bytes
-        (-> (response (ByteArrayInputStream. bytes))
-            (content-type "application/octect-stream"))
-        (-> (response "Layer not found")
-            (status 404)))))
+      (-> (response (ByteArrayInputStream. bytes))
+          (content-type "application/octect-stream"))
+      (-> (response "Layer not found")
+          (status 404)))))
 
 (defn put-image-checksum [request]
   (json-response "OK"))
@@ -114,9 +114,9 @@
         path (str repo1 "/" repo2 "/tags/")
         tag-paths (list-objects path)]
     (if (seq tag-paths)
-        (json-response (reduce assoc (map read-tag tag-paths)))
-        (-> (json-response {})
-            (status 404)))))
+      (json-response (reduce assoc (map read-tag tag-paths)))
+      (-> (json-response {})
+          (status 404)))))
 
 (defn put-images [request]
   "this is the final call from Docker client when pushing an image
@@ -141,18 +141,18 @@
           parent (get data "parent")
           new-ancestry (conj ancestry image-id)]
       (if data
-          (if parent
-              (get-ancestry parent new-ancestry)
-              new-ancestry)
-          nil))))
+        (if parent
+          (get-ancestry parent new-ancestry)
+          new-ancestry)
+        nil))))
 
 (defn get-image-ancestry [request]
   (let [image-id (get-in request [:parameters :path :image])
         ancestry (get-ancestry image-id)]
     (if ancestry
-       (json-response ancestry)
-       (-> (json-response "Image not found")
-           (status 404)))))
+      (json-response ancestry)
+      (-> (json-response "Image not found")
+          (status 404)))))
 
 (def app
   (-> (s1st/swagger-executor)
