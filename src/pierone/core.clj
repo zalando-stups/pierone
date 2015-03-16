@@ -11,7 +11,8 @@
     [java.nio.file Files]
     [java.nio.file OpenOption]
     [java.nio.file Paths]
-    [java.util Arrays]))
+    [java.util Arrays]
+    (java.io ByteArrayInputStream)))
 
 (def data-path (Paths/get "data" (into-array String [])))
 
@@ -97,7 +98,7 @@
   (let [image-id (get-in request [:parameters :path :image])
         bytes (get-object (str image-id ".layer"))]
     (if bytes
-        (-> (response bytes)
+        (-> (response (ByteArrayInputStream. bytes))
             (content-type "application/octect-stream"))
         (-> (response "Layer not found")
             (status 404)))))

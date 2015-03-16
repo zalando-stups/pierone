@@ -69,6 +69,7 @@
   (is (= "foobar" (-> (with-redefs [get-object get-mock-image-layer-object]
                                       (app (mock/request :get "/v1/images/123/layer")))
                       :body
+                      org.apache.commons.io.IOUtils/toByteArray
                       String.))))
 
 (deftest test-app-put-layer
