@@ -1,6 +1,7 @@
 (ns pierone.core-test    (:require
                          [clojure.test :refer :all]
                          [pierone.core :refer :all]
+                         [pierone.backend.file :refer :all]
                          [ring.mock.request :as mock]
                          [clojure.data.json :as json]))
 
