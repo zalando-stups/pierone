@@ -56,6 +56,8 @@ paths:
       responses:
         "200":
           description: No response was specified
+        "404":
+          description: Repository/tags not found
       description: ""
       summary: Get Tags
       operationId: pierone.core/get-tags
@@ -166,6 +168,8 @@ paths:
       responses:
         "200":
           description: No response was specified
+        "404":
+          description: Image does not exist
       description: ""
       summary: Get Image JSON
       operationId: pierone.core/get-image-json
@@ -194,12 +198,14 @@ paths:
           required: true
       responses:
         "200":
-          description: No response was specified
+          description: Return binary layer data
+        "404":
+          description: Image layer does not exist
       description: ""
       summary: Get Image Layer
       operationId: pierone.core/get-image-layer
       produces:
-        - application/json
+        - application/octet-stream
   /v1/images/{image}/checksum:
     put:
       parameters:
@@ -225,6 +231,8 @@ paths:
       responses:
         "200":
           description: No response was specified
+        "404":
+          description: Image ID does not exist
       description: ""
       summary: Get Image ancestry
       operationId: pierone.core/get-image-ancestry
@@ -234,7 +242,7 @@ paths:
     get:
       responses:
         "200":
-          description: No response was specified
+          description: Docker Registry v1 is available
       description: ""
       summary: Ping
       operationId: pierone.core/ping

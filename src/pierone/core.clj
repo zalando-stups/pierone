@@ -134,9 +134,10 @@
         repo2 (get-in request [:parameters :path :repo2])
         path (str repo1 "/" repo2 "/tags/")
         tag-paths (list-objects path)]
-    (log/info tag-paths)
-    (log/info (reduce assoc (map read-tag tag-paths)))
-    (json-response (reduce assoc (map read-tag tag-paths)))))
+    (if (seq tag-paths)
+        (json-response (reduce assoc (map read-tag tag-paths)))
+        (-> (json-response {})
+            (status 404)))))
 
 (defn put-images [request]
   "this is the final call from Docker client when pushing an image
@@ -157,19 +158,22 @@
   ([image-id]
     (get-ancestry image-id []))
   ([image-id ancestry]
-    (let [parent (get (get-image-json-data image-id) "parent")
+    (let [data (get-image-json-data image-id)
+          parent (get data "parent")
           new-ancestry (conj ancestry image-id)]
-      (if parent
-        (get-ancestry parent new-ancestry)
-        new-ancestry
-        )
-
-      )))
+      (if data
+          (if parent
+              (get-ancestry parent new-ancestry)
+              new-ancestry)
+          nil))))
 
 (defn get-image-ancestry [request]
-  (let [image-id (get-in request [:parameters :path :image])]
-    (log/info (get-ancestry image-id))
-    (json-response (get-ancestry image-id))))
+  (let [image-id (get-in request [:parameters :path :image])
+        ancestry (get-ancestry image-id)]
+    (if ancestry
+       (json-response ancestry)
+       (-> (json-response "Image not found")
+           (status 404)))))
 
 (def app
   (-> (s1st/swagger-executor)
