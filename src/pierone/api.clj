@@ -71,7 +71,6 @@
 (defn image-key [image-id type]
   (str "images/" image-id "." (name type)))
 
-
 (defn as-json [resp]
   "Set response Content-Type to application/json"
   (content-type resp "application/json"))
@@ -144,11 +143,14 @@
 (defn put-image-checksum [request backend]
   (json-response "OK"))
 
+(defn tags-key [repo1 repo2]
+  (str "repositories/" repo1 "/" repo2 "/tags/"))
+
 (defn put-tag [request backend]
   (let [repo1 (get-in request [:parameters :path :repo1])
         repo2 (get-in request [:parameters :path :repo2])
         tag (get-in request [:parameters :path :tag])
-        path (str repo1 "/" repo2 "/tags/" tag ".json")
+        path (str (tags-key repo1 repo2) tag ".json")
         obj (backend/get-object backend path)
         bytes (-> request
                   :body
@@ -173,7 +175,7 @@
 (defn get-tags [request backend]
   (let [repo1 (get-in request [:parameters :path :repo1])
         repo2 (get-in request [:parameters :path :repo2])
-        path (str repo1 "/" repo2 "/tags/")
+        path (tags-key repo1 repo2)
         tag-paths (backend/list-objects backend path)]
     (if (seq tag-paths)
       (json-response (reduce merge (map (partial read-tag backend) tag-paths)))
@@ -183,14 +185,8 @@
 (defn put-images [request backend]
   "this is the final call from Docker client when pushing an image
    Docker client expects HTTP status code 204 (No Content) instead of 200 here!"
-  (let [repo1 (get-in request [:parameters :path :repo1])
-        repo2 (get-in request [:parameters :path :repo2])
-        path (str repo1 "/" repo2 "/images.json")
-        ]
-    ; TODO: the body is actually empty/useless here
-    (backend/put-object backend path (-> request :body json/generate-string (.getBytes "UTF-8")))
     (-> (response "")
-        (status 204))))
+        (status 204)))
 
 (defn get-images [request backend]
   (json-response []))
