@@ -5,9 +5,14 @@
     [pierone.backend.file :refer :all]
     [ring.mock.request :as mock]
     [clojure.data.json :as json])
-  (:import (pierone.backend.file FileBackend)))
+  (:import (pierone.backend.file FileBackend)
+           (pierone.backend.s3 S3Backend)))
 
 (deftest test-new-system
-  (is (->> (new-system "api.yaml" new-file-backend)
+  (is (->> (new-system {})
            :backend
-           (instance? FileBackend))))
+           (instance? FileBackend)))
+
+  (is (->> (new-system {:backend "s3"})
+           :backend
+           (instance? S3Backend))))

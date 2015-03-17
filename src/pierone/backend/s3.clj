@@ -1,13 +1,17 @@
 (ns pierone.backend.s3
   (:require [amazonica.aws.s3 :as aws]
             [com.stuartsierra.component :as component]
-            [pierone.backend :refer [Backend]])
-  (:import (java.io ByteArrayInputStream)))
+            [pierone.backend :refer [Backend]]
+            [clojure.tools.logging :as log])
+  (:import (java.io ByteArrayInputStream)
+           (com.amazonaws.services.s3.model AmazonS3Exception)))
 
 (defrecord S3Backend [bucket-name]
   component/Lifecycle
 
-  (start [this] this)
+  (start [this]
+    (log/info "Starting S3 backend using bucket" bucket-name)
+    this)
 
   (stop [this] this)
 
@@ -19,10 +23,15 @@
                     :input-stream (ByteArrayInputStream. bytes)))
 
   (get-object [{:keys [bucket-name]} key]
-    (-> (aws/get-object :bucket-name bucket-name
-                        :key key)
-        :input-stream
-        org.apache.commons.io.IOUtils/toByteArray))
+    (try
+      (-> (aws/get-object :bucket-name bucket-name
+                          :key key)
+          :input-stream
+          org.apache.commons.io.IOUtils/toByteArray)
+      (catch AmazonS3Exception se
+        (if (= 404 (.getStatusCode se))
+            nil
+            (throw)))))
 
   (list-objects [{:keys [bucket-name]} prefix]
     (->> (aws/list-objects :bucket-name bucket-name
@@ -31,3 +40,6 @@
          (map :key)
          (filter #(.startsWith % prefix))
          seq)))
+
+(defn new-s3-backend [bucket-name]
+  (map->S3Backend {:bucket-name bucket-name}))

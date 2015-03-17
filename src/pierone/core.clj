@@ -8,19 +8,23 @@
             [environ.core :refer [env]]
             [cheshire.core :as json]
             [pierone.api :refer [new-api]]
-            [pierone.backend.file :refer [new-file-backend]]))
+            [pierone.backend.file :refer [new-file-backend]]
+            [pierone.backend.s3 :refer [new-s3-backend]]))
 
-(defn new-system [definition new-backend]
+(defn new-system [config]
   (component/system-map
 
     ; our backend implementation
-    :backend (new-backend)
+    :backend (case (:backend config)
+               ("s3") (new-s3-backend (:s3-bucket-name config))
+               ("file") (new-file-backend)
+               (new-file-backend))
 
     ; our API depends on the Backend
     :api (component/using
-           (new-api definition) [:backend])))
+           (new-api "api.yaml") [:backend])))
 
 (defn -main [& args]
   (log/info "Starting Pier One Docker Registry")
   (component/start
-    (new-system "api.yaml" new-file-backend)))
+    (new-system env)))

@@ -38,10 +38,10 @@
   (start [this]
     (if httpd
       (do
-        (log/debug "skipping start of HTTP; already running")
+        (log/debug "Skipping start of HTTP; already running")
         this)
       (do
-        (log/info "starting HTTP daemon for API" definition)
+        (log/info "Starting HTTP server for API" definition)
         (let [; the actual ring setup
               handler (new-app definition backend)]
 
@@ -51,11 +51,11 @@
   (stop [this]
     (if-not httpd
       (do
-        (log/debug "skipping stop of HTTP; not running")
+        (log/debug "Skipping stop of HTTP; not running")
         this)
 
       (do
-        (log/info "stopping HTTP daemon")
+        (log/info "Stopping HTTP server")
         (httpd :timeout 100)
         (assoc this :httpd nil)))))
 

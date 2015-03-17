@@ -9,6 +9,7 @@
    [clojure.repl :refer [apropos dir doc find-doc pst source]]
    [clojure.tools.namespace.repl :refer [refresh refresh-all]]
    [com.stuartsierra.component :as component]
+   [environ.core :refer [env]]
    [pierone.core]
    [pierone.backend.file]))
 
@@ -22,7 +23,7 @@
   #'system."
   []
   (alter-var-root #'system
-                  (constantly (pierone.core/new-system "api.yaml" pierone.backend.file/new-file-backend))))
+                  (constantly (pierone.core/new-system env))))
 
 (defn start
   "Starts the system running, updates the Var #'system."

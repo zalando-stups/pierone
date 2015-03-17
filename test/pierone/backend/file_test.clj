@@ -2,7 +2,8 @@
   (:require
     [clojure.test :refer :all]
     [pierone.backend.file :refer :all]
-    [pierone.backend :as backend])
+    [pierone.backend :as backend]
+    [com.stuartsierra.component :as component])
   (:import
     [java.nio.file Files]
     [java.nio.file.attribute FileAttribute]))
@@ -12,6 +13,9 @@
 (deftest test-file-backend
   (let [temp-dir (Files/createTempDirectory "pierone.backend.file-test" (make-array FileAttribute 0))
         backend (map->FileBackend {:data-path temp-dir})]
+
+    (is (component/start backend))
+    (is (component/stop backend))
 
     (is (= "foo" (do
           (backend/put-object backend "test" foo-bytes)
