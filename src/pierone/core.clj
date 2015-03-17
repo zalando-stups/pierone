@@ -16,7 +16,7 @@
 
     ; our backend implementation
     :backend (case (:backend config)
-               ("s3") (new-s3-backend (:s3-bucket-name config))
+               ("s3") (new-s3-backend (:s3-bucket-name config) (:aws-region-id config))
                ("file") (new-file-backend)
                (new-file-backend))
 

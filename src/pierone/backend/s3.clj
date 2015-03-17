@@ -6,7 +6,7 @@
   (:import (java.io ByteArrayInputStream)
            (com.amazonaws.services.s3.model AmazonS3Exception)))
 
-(defrecord S3Backend [bucket-name]
+(defrecord S3Backend [bucket-name aws-region-id]
   component/Lifecycle
 
   (start [this]
@@ -18,13 +18,15 @@
   Backend
 
   (put-object [{:keys [bucket-name]} key bytes]
-    (aws/put-object :bucket-name bucket-name
+    (aws/put-object {:endpoint aws-region-id}
+                    :bucket-name bucket-name
                     :key key
                     :input-stream (ByteArrayInputStream. bytes)))
 
   (get-object [{:keys [bucket-name]} key]
     (try
-      (-> (aws/get-object :bucket-name bucket-name
+      (-> (aws/get-object {:endpoint aws-region-id}
+                          :bucket-name bucket-name
                           :key key)
           :input-stream
           org.apache.commons.io.IOUtils/toByteArray)
@@ -34,12 +36,13 @@
             (throw)))))
 
   (list-objects [{:keys [bucket-name]} prefix]
-    (->> (aws/list-objects :bucket-name bucket-name
+    (->> (aws/list-objects {:endpoint aws-region-id}
+                           :bucket-name bucket-name
                            :key-prefix prefix)
          :object-summaries
          (map :key)
          (filter #(.startsWith % prefix))
          seq)))
 
-(defn new-s3-backend [bucket-name]
-  (map->S3Backend {:bucket-name bucket-name}))
+(defn new-s3-backend [bucket-name aws-region-id]
+  (map->S3Backend {:bucket-name bucket-name :aws-region-id aws-region-id}))

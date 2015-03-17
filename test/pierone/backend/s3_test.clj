@@ -18,7 +18,7 @@
 
 (deftest test-s3-backend
   (let [
-        backend (new-s3-backend "my-bucket")]
+        backend (new-s3-backend "my-bucket" "my-region")]
 
     (is (component/start backend))
     (is (component/stop backend))
