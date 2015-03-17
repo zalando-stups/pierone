@@ -35,7 +35,7 @@
       (catch java.nio.file.NoSuchFileException e nil)))
 
   (list-objects [{:keys [data-path]} prefix]
-    (map #(.substring (str %) (+ 1 (count (str data-path)))) (->> prefix
+    (map #(.substring (str %) (inc (count (str data-path)))) (->> prefix
                                                                   (.resolve data-path)
                                                                   .toFile
                                                                   .listFiles))))

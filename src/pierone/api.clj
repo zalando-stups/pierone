@@ -169,7 +169,7 @@
 
 (defn read-tag [backend path]
   (let [basename (last (.split path "/"))
-        tag (.substring basename 0 (- (.length basename) 5))]
+        tag (.substring basename 0 (- (count basename) 5))]
     {tag (json/parse-string (String. (backend/get-object backend path)))}))
 
 (defn get-tags [request backend]

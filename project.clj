@@ -19,7 +19,8 @@
                            [org.slf4j/slf4j-simple "1.7.7"]]
 
             :plugins [[lein-cloverage "1.0.2"]
-                      [lein-ring "0.9.2"]]
+                      [lein-ring "0.9.2"]
+                      [lein-kibit "0.0.8"]]
 
             :aliases {"cloverage" ["with-profile" "test" "cloverage"]}
 

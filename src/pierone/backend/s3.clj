@@ -47,9 +47,7 @@
           :input-stream
           org.apache.commons.io.IOUtils/toByteArray)
       (catch AmazonS3Exception se
-        (if (= 404 (.getStatusCode se))
-            nil
-            (throw)))))
+        (when-not (= 404 (.getStatusCode se)) (throw)))))
 
   (list-objects [{:keys [bucket-name]} prefix]
     (->> (aws/list-objects {:endpoint aws-region-id}
