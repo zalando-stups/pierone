@@ -21,9 +21,10 @@ To start a web server for the application, run:
 
 .. code-block:: bash
 
-    $ lein ring server
+    $ lein repl
+    (go)
 
-The web server will run on port 3000.
+The web server will run on port 8080.
 
 Testing
 =======
@@ -37,16 +38,16 @@ Running unit tests with code coverage report:
 .. code-block:: bash
 
     $ docker pull busybox
-    $ docker tag busybox localhost:3000/example/foobar:1.0
-    $ docker push localhost:3000/example/foobar:1.0
-    $ docker pull localhost:3000/example/foobar:1.0
+    $ docker tag busybox localhost:8080/example/foobar:1.0
+    $ docker push localhost:8080/example/foobar:1.0
+    $ docker pull localhost:8080/example/foobar:1.0
 
 Building
 ========
 
 .. code-block:: bash
 
-    $ lein ring uberjar
+    $ lein uberjar
     $ docker build -t stups/pierone .
 
 .. _Leiningen: http://leiningen.org/

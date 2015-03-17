@@ -12,7 +12,7 @@ paths:
     get:
       summary: Index
       description: "Home page"
-      operationId: pierone.core/index
+      operationId: pierone.api/index
       responses:
         "200":
           description: No response was specified
@@ -22,7 +22,7 @@ paths:
     get:
       summary: Check v2
       description: "Endpoint to check for V2(.1) registry API"
-      operationId: pierone.core/check-v2
+      operationId: pierone.api/check-v2
       responses:
         "404":
           description: v2 is not available
@@ -39,7 +39,7 @@ paths:
           description: No response was specified
       description: ""
       summary: Search
-      operationId: pierone.core/search
+      operationId: pierone.api/search
       produces:
         - application/json
   /v1/repositories/{repo1}/{repo2}/tags:
@@ -60,7 +60,7 @@ paths:
           description: Repository/tags not found
       description: ""
       summary: Get Tags
-      operationId: pierone.core/get-tags
+      operationId: pierone.api/get-tags
       produces:
         - application/json
   /v1/repositories/{repo1}/{repo2}/tags/{tag}:
@@ -85,7 +85,7 @@ paths:
           description: Tag already exists
       description: ""
       summary: Put Tag
-      operationId: pierone.core/put-tag
+      operationId: pierone.api/put-tag
       produces:
         - application/json
   /v1/repositories/{repo1}/{repo2}/:
@@ -104,7 +104,7 @@ paths:
           description: No response was specified
       description: ""
       summary: Put Repo
-      operationId: pierone.core/put-repo
+      operationId: pierone.api/put-repo
       produces:
         - application/json
 
@@ -124,7 +124,7 @@ paths:
           description: No response was specified
       description: ""
       summary: Put Images
-      operationId: pierone.core/put-images
+      operationId: pierone.api/put-images
       produces:
         - application/json
     get:
@@ -142,7 +142,7 @@ paths:
           description: No response was specified
       description: ""
       summary: Get Images
-      operationId: pierone.core/get-images
+      operationId: pierone.api/get-images
       produces:
         - application/json
   /v1/images/{image}/json:
@@ -157,7 +157,7 @@ paths:
           description: Image JSON was stored successfully
       description: ""
       summary: Put Image JSON
-      operationId: pierone.core/put-image-json
+      operationId: pierone.api/put-image-json
       produces:
         - application/json
     get:
@@ -174,7 +174,7 @@ paths:
           description: Image does not exist
       description: ""
       summary: Get Image JSON
-      operationId: pierone.core/get-image-json
+      operationId: pierone.api/get-image-json
       produces:
         - application/json
   /v1/images/{image}/layer:
@@ -189,7 +189,7 @@ paths:
           description: Image layer data was stored successfully
       description: ""
       summary: Put Image Layer
-      operationId: pierone.core/put-image-layer
+      operationId: pierone.api/put-image-layer
       produces:
         - application/json
     get:
@@ -205,7 +205,7 @@ paths:
           description: Image layer does not exist
       description: ""
       summary: Get Image Layer
-      operationId: pierone.core/get-image-layer
+      operationId: pierone.api/get-image-layer
       produces:
         - application/octet-stream
   /v1/images/{image}/checksum:
@@ -220,7 +220,7 @@ paths:
           description: No response was specified
       description: ""
       summary: Put Image Checksum
-      operationId: pierone.core/put-image-checksum
+      operationId: pierone.api/put-image-checksum
       produces:
         - application/json
   /v1/images/{image}/ancestry:
@@ -237,7 +237,7 @@ paths:
           description: Image ID does not exist
       description: ""
       summary: Get Image ancestry
-      operationId: pierone.core/get-image-ancestry
+      operationId: pierone.api/get-image-ancestry
       produces:
         - application/json
   /v1/_ping:
@@ -247,7 +247,7 @@ paths:
           description: Docker Registry v1 is available
       description: ""
       summary: Ping
-      operationId: pierone.core/ping
+      operationId: pierone.api/ping
       produces:
         - application/json
 

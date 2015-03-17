@@ -8,12 +8,16 @@
             :dependencies [[org.clojure/clojure "1.6.0"]
                            [ring "1.3.2"]
                            [io.sarnowski/swagger1st "0.3.0"]
+                           [com.stuartsierra/component "0.2.3"]
+                           [http-kit "2.1.16"]
                            [ring/ring-json "0.3.1"]
                            [environ "1.0.0"]
                            [commons-io/commons-io "2.4"]
                            [org.clojure/data.json "0.2.5"]
                            ; amazon aws (if upgrading, also check the joda-time version)
-                           [amazonica "0.3.19"]]
+                           [amazonica "0.3.19"]
+                           [org.slf4j/slf4j-simple "1.7.7"]]
+
             :plugins [[lein-cloverage "1.0.2"]
                       [lein-ring "0.9.2"]]
 
@@ -21,7 +25,17 @@
 
             :ring {:handler pierone.core/app}
 
+            :main ^:skip-aot pierone.core
+
             :uberjar-name "pierone.jar"
 
-            :profiles {:test {:dependencies [[ring/ring-mock "0.2.0"]]}})
+            :profiles {:uberjar {:aot :all}
+
+                       :test {:dependencies [[ring/ring-mock "0.2.0"]]}
+
+                       :dev {:repl-options {:init-ns user}
+                             :source-paths ["dev"]
+                             :dependencies [[org.clojure/tools.namespace "0.2.10"]
+                                            [org.clojure/java.classpath "0.2.2"]]}})
+
 

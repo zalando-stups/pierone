@@ -1,0 +1,219 @@
+(ns pierone.api
+  (:require [io.sarnowski.swagger1st.core :as s1st]
+            [ring.middleware.params :refer [wrap-params]]
+            [ring.middleware.json :refer [wrap-json-body]]
+            [ring.util.response :refer :all]
+            [com.stuartsierra.component :as component]
+            [org.httpkit.server :as httpkit]
+            [clojure.tools.logging :as log]
+            [cheshire.core :as json]
+            [pierone.backend :as backend])
+    (:import
+    [java.util Arrays]
+    (java.io ByteArrayInputStream)))
+
+(defn new-app [definition backend]
+  (let [; our custom mapper that adds the 'backend' as a second parameter to all API functions
+        backend-mapper (fn [operationId]
+                         (if-let [api-fn (s1st/map-function-name operationId)]
+                           (fn [request] (api-fn request backend))))]
+
+        ; the actual ring setup
+        (-> (s1st/swagger-executor :mappers [backend-mapper])
+                    (s1st/swagger-security)
+                    (s1st/swagger-validator)
+                    (s1st/swagger-parser)
+                    (s1st/swagger-discovery)
+                    (s1st/swagger-mapper ::s1st/yaml-cp definition)
+                    (wrap-json-body)
+                    (wrap-params))
+  ))
+
+; 'definition' will be configured during instantiation
+; 'httpd' is the internal state of the HTTP server
+; 'backend' will be injected via the lifecycle before start
+(defrecord API [definition httpd backend]
+  component/Lifecycle
+
+  (start [this]
+    (if httpd
+      (do
+        (log/debug "skipping start of HTTP; already running")
+        this)
+      (do
+        (log/info "starting HTTP daemon for API" definition)
+        (let [; the actual ring setup
+              handler (new-app definition backend)]
+
+          ; use httpkit as ring implementation
+          (assoc this :httpd (httpkit/run-server handler {:port 8080}))))))
+
+  (stop [this]
+    (if-not httpd
+      (do
+        (log/debug "skipping stop of HTTP; not running")
+        this)
+
+      (do
+        (log/info "stopping HTTP daemon")
+        (httpd :timeout 100)
+        (assoc this :httpd nil)))))
+
+(defn new-api
+  "Official constructor for the API."
+  [definition]
+  (map->API {:definition definition}))
+
+
+;;; the real business logic! mapped in the api.yaml
+
+
+(defn as-json [resp]
+  "Set response Content-Type to application/json"
+  (content-type resp "application/json"))
+
+(defn json-response [data]
+  (-> (response data)
+      as-json))
+
+(defn check-v2 [request backend]
+  (-> (json-response "Registry API v2 is not implemented")
+      (status 404)))
+
+(defn index [request backend]
+  (-> (response "<h1>Welcome to Pier One!<h1>
+                 <a href='/ui/'>Swagger UI</a>")
+      (content-type "text/html")))
+
+(defn ping [request backend]
+  (-> (json-response true)
+      (header "X-Docker-Registry-Version" "0.6.3")))
+
+(defn put-repo [request backend]
+  (-> (json-response "OK")
+      (header "X-Docker-Token" "FakeToken")
+      (header "X-Docker-Endpoints" (get-in request [:headers "host"]))))
+
+(defn get-image-json-data [backend image-id]
+  (let [data (backend/get-object backend (str image-id ".json"))]
+    (if data
+      (json/parse-string (String. data))
+      nil)
+    ))
+
+(defn get-image-json [request backend]
+  (let [image-id (get-in request [:parameters :path :image])
+        data (get-image-json-data backend image-id)]
+    (if data
+      (json-response data)
+      (-> (json-response "Image not found")
+          (status 404)))))
+
+
+(defn store-image-json [backend image-id data]
+  (log/info "Storing image JSON" image-id)
+  (backend/put-object backend (str image-id ".json") (-> data
+                                         json/generate-string
+                                         (.getBytes "UTF-8"))))
+
+(defn put-image-json [request backend]
+  (let [image-id (get-in request [:parameters :path :image])]
+
+    (store-image-json backend image-id (:body request))
+    (json-response "OK")))
+
+(defn put-image-layer [request backend]
+  (let [image-id (get-in request [:parameters :path :image])]
+    (backend/put-object backend (str image-id ".layer") (org.apache.commons.io.IOUtils/toByteArray (:body request)))
+    (json-response "OK")))
+
+(defn get-image-layer [request backend]
+  (let [image-id (get-in request [:parameters :path :image])
+        bytes (backend/get-object backend (str image-id ".layer"))]
+    (if bytes
+      (-> (response (ByteArrayInputStream. bytes))
+          (content-type "application/octect-stream"))
+      (-> (response "Layer not found")
+          (status 404)))))
+
+(defn put-image-checksum [request backend]
+  (json-response "OK"))
+
+(defn put-tag [request backend]
+  (let [repo1 (get-in request [:parameters :path :repo1])
+        repo2 (get-in request [:parameters :path :repo2])
+        tag (get-in request [:parameters :path :tag])
+        path (str repo1 "/" repo2 "/tags/" tag ".json")
+        obj (backend/get-object backend path)
+        bytes (-> request
+                  :body
+                  json/generate-string
+                  (.getBytes "UTF-8"))
+        ]
+
+    (if obj
+      (if (Arrays/equals obj bytes)
+        (response "OK")
+        (-> (json-response "Conflict: tags are immutable")
+            (status 409)))
+      (do
+        (backend/put-object backend path bytes)
+        (json-response "OK")))))
+
+(defn read-tag [backend path]
+  (let [basename (last (.split path "/"))
+        tag (.substring basename 0 (- (.length basename) 5))]
+    {tag (json/parse-string (String. (backend/get-object backend path)))}))
+
+(defn get-tags [request backend]
+  (let [repo1 (get-in request [:parameters :path :repo1])
+        repo2 (get-in request [:parameters :path :repo2])
+        path (str repo1 "/" repo2 "/tags/")
+        tag-paths (backend/list-objects backend path)]
+    (if (seq tag-paths)
+      (json-response (reduce merge (map (partial read-tag backend) tag-paths)))
+      (-> (json-response {})
+          (status 404)))))
+
+(defn put-images [request backend]
+  "this is the final call from Docker client when pushing an image
+   Docker client expects HTTP status code 204 (No Content) instead of 200 here!"
+  (let [repo1 (get-in request [:parameters :path :repo1])
+        repo2 (get-in request [:parameters :path :repo2])
+        path (str repo1 "/" repo2 "/images.json")
+        ]
+    ; TODO: the body is actually empty/useless here
+    (backend/put-object backend path (-> request :body json/generate-string (.getBytes "UTF-8")))
+    (-> (response "")
+        (status 204))))
+
+(defn get-images [request backend]
+  (json-response []))
+
+(defn get-ancestry
+  ([backend image-id]
+    (get-ancestry backend image-id []))
+  ([backend image-id ancestry]
+    (let [data (get-image-json-data backend image-id)
+          parent (get data "parent")
+          new-ancestry (conj ancestry image-id)]
+      (if data
+        (if parent
+          (recur backend parent new-ancestry)
+          new-ancestry)
+        nil))))
+
+(defn get-image-ancestry [request backend]
+  (let [image-id (get-in request [:parameters :path :image])
+        ancestry (get-ancestry backend image-id)]
+    (if ancestry
+      (json-response ancestry)
+      (-> (json-response "Image not found")
+          (status 404)))))
+
+(defn search [request backend]
+  (let [query (get-in request [:parameters :path :q])]
+    (json-response {:results []})
+    ))
+
+
