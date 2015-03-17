@@ -26,9 +26,9 @@
 
   (is (= 404 (:status (app (mock/request :get "/v1/repositories/NON/EXISTING/tags")))))
 
-  (is (= "{\"1.0\":\"123\"}" (:body (with-redefs [list-objects (constantly ["foo/bar/1.0.json"])
-                                            get-object (constantly (.getBytes "\"123\""))]
-                                (app (mock/request :get "/v1/repositories/foo/bar/tags")))))))
+  (is (= "{\"2.0\":\"123\",\"1.0\":\"123\"}" (:body (with-redefs [list-objects (constantly ["foo/bar/1.0.json", "foo/bar/2.0.json"])
+                                                  get-object (constantly (.getBytes "\"123\""))]
+                                                 (app (mock/request :get "/v1/repositories/foo/bar/tags")))))))
 
 
 (deftest test-app-get-image-json
@@ -37,7 +37,7 @@
 
 
   (is (= "{}" (:body (with-redefs [get-object (constantly (.getBytes "{}"))]
-                                      (app (mock/request :get "/v1/images/123/json")))))))
+                                  (app (mock/request :get "/v1/images/123/json")))))))
 
 (deftest test-app-put-image-json
 

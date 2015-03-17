@@ -114,7 +114,7 @@
         path (str repo1 "/" repo2 "/tags/")
         tag-paths (list-objects path)]
     (if (seq tag-paths)
-      (json-response (reduce assoc (map read-tag tag-paths)))
+      (json-response (reduce merge (map read-tag tag-paths)))
       (-> (json-response {})
           (status 404)))))
 
