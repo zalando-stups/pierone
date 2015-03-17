@@ -1,4 +1,5 @@
 (ns pierone.core
+  (:gen-class)
   (:require [io.sarnowski.swagger1st.core :as s1st]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.json :refer [wrap-json-body]]
