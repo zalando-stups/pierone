@@ -95,3 +95,8 @@
 
 (deftest test-put-checksum
   (is (= 200 (:status (put-image-checksum {})))))
+
+(deftest test-app-search
+
+  (is (= 200 (:status (with-redefs [list-objects (constantly nil)]
+                        (app (mock/request :get "/v1/search?q=")))))))

@@ -154,6 +154,11 @@
       (-> (json-response "Image not found")
           (status 404)))))
 
+(defn search [request]
+  (let [query (get-in request [:parameters :path :q])]
+    (json-response {:results []})
+    ))
+
 (def app
   (-> (s1st/swagger-executor)
       (s1st/swagger-security)
