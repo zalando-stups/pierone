@@ -18,7 +18,7 @@
 
 (deftest test-s3-backend
   (let [
-        backend (new-s3-backend "my-bucket" "my-region")]
+        backend (new-s3-backend "my-bucket" "eu-central-1")]
 
     (is (component/start backend))
     (is (component/stop backend))
@@ -27,7 +27,7 @@
       (is (= nil (backend/get-object backend "test"))))
 
     (with-redefs [aws/get-object (constantly {:input-stream (ByteArrayInputStream. (.getBytes "foo"))})
-                  aws/put-object (constantly nil)
+                  invoke-s3-put (constantly nil)
                   aws/list-objects (constantly {:object-summaries []})
                   ]
 

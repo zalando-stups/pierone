@@ -1,6 +1,7 @@
 (ns pierone.backend.file
   (:require [com.stuartsierra.component :as component]
-            [pierone.backend :refer [Backend]])
+            [clojure.tools.logging :as log]
+            [pierone.backend :refer [Backend as-bytes]])
   (:import
     [java.nio.file.attribute FileAttribute]
     [java.nio.file Files]
@@ -15,16 +16,18 @@
 (defrecord FileBackend [^Path data-path]
   component/Lifecycle
 
-  (start [this] this)
+  (start [this]
+    (log/info "Starting file backend using data path" (str data-path))
+    this)
 
   (stop [this] this)
 
   Backend
 
-  (put-object [{:keys [data-path]} key bytes]
+  (put-object [{:keys [data-path]} key stream-or-bytes]
     (let [full-path (.resolve data-path key)]
       (create-dirs (.getParent full-path))
-      (Files/write full-path bytes (make-array OpenOption 0))))
+      (Files/write full-path (as-bytes stream-or-bytes) (make-array OpenOption 0))))
 
   (get-object [{:keys [data-path]} key]
     (try

@@ -68,13 +68,13 @@
                                       (assoc :body (json/write-str {:test "test"}))))))))
 
 (defn- get-mock-image-json-object [path]
-  (-> (get {"123.json" "{\"parent\":\"456\"}"
-            "456.json" "{}"} path)
+  (-> (get {"images/123.json" "{\"parent\":\"456\"}"
+            "images/456.json" "{}"} path)
       (.getBytes)))
 
 (defn- get-mock-image-layer-object [path]
-  (-> (get {"123.layer" "foobar"
-            "456.layer" "blubber"} path)
+  (-> (get {"images/123.layer" "foobar"
+            "images/456.layer" "blubber"} path)
       (.getBytes)))
 
 (deftest test-app-get-ancestry

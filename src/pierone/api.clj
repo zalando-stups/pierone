@@ -3,6 +3,7 @@
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.json :refer [wrap-json-body]]
             [ring.util.response :refer :all]
+            [ring.adapter.jetty :as jetty]
             [com.stuartsierra.component :as component]
             [org.httpkit.server :as httpkit]
             [clojure.tools.logging :as log]
@@ -46,7 +47,7 @@
               handler (new-app definition backend)]
 
           ; use httpkit as ring implementation
-          (assoc this :httpd (httpkit/run-server handler {:port 8080}))))))
+          (assoc this :httpd (jetty/run-jetty handler {:port 8080}))))))
 
   (stop [this]
     (if-not httpd
@@ -56,7 +57,7 @@
 
       (do
         (log/info "Stopping HTTP server")
-        (httpd :timeout 100)
+        (.stop httpd)
         (assoc this :httpd nil)))))
 
 (defn new-api
@@ -66,6 +67,9 @@
 
 
 ;;; the real business logic! mapped in the api.yaml
+
+(defn image-key [image-id type]
+  (str "images/" image-id "." (name type)))
 
 
 (defn as-json [resp]
@@ -95,7 +99,7 @@
       (header "X-Docker-Endpoints" (get-in request [:headers "host"]))))
 
 (defn get-image-json-data [backend image-id]
-  (let [data (backend/get-object backend (str image-id ".json"))]
+  (let [data (backend/get-object backend (image-key image-id :json))]
     (if data
       (json/parse-string (String. data))
       nil)
@@ -112,7 +116,7 @@
 
 (defn store-image-json [backend image-id data]
   (log/info "Storing image JSON" image-id)
-  (backend/put-object backend (str image-id ".json") (-> data
+  (backend/put-object backend (image-key image-id :json) (-> data
                                          json/generate-string
                                          (.getBytes "UTF-8"))))
 
@@ -124,12 +128,13 @@
 
 (defn put-image-layer [request backend]
   (let [image-id (get-in request [:parameters :path :image])]
-    (backend/put-object backend (str image-id ".layer") (org.apache.commons.io.IOUtils/toByteArray (:body request)))
+    (log/info image-id (:headers request))
+    (backend/put-object backend (image-key image-id :layer) (:body request))
     (json-response "OK")))
 
 (defn get-image-layer [request backend]
   (let [image-id (get-in request [:parameters :path :image])
-        bytes (backend/get-object backend (str image-id ".layer"))]
+        bytes (backend/get-object backend (image-key image-id :layer))]
     (if bytes
       (-> (response (ByteArrayInputStream. bytes))
           (content-type "application/octect-stream"))
