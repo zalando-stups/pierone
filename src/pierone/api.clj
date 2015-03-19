@@ -47,7 +47,7 @@
               handler (new-app definition backend)]
 
           ; use httpkit as ring implementation
-          (assoc this :httpd (jetty/run-jetty handler {:port 8080}))))))
+          (assoc this :httpd (jetty/run-jetty handler {:port 8080 :join? false}))))))
 
   (stop [this]
     (if-not httpd
