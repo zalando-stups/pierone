@@ -15,7 +15,7 @@ paths:
       operationId: pierone.api/index
       responses:
         "200":
-          description: No response was specified
+          description: Human-readable home page
       produces:
         - text/html
   /v2/:
@@ -34,14 +34,28 @@ paths:
         - name: q
           in: query
           type: string
+          description: Search string to match repository names
       responses:
         "200":
-          description: No response was specified
+          description: Return list of matching repository names
+          schema:
+            type: object
+            properties:
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+
       description: ""
       summary: Search
       operationId: pierone.api/search
       produces:
         - application/json
+
+
   /v1/repositories/{repo1}/{repo2}/tags:
     get:
       parameters:
@@ -102,6 +116,13 @@ paths:
       responses:
         "200":
           description: No response was specified
+          headers:
+            "X-Docker-Token":
+              type: string
+            "X-Docker-Endpoints":
+              type: string
+          schema:
+            type: string
       description: ""
       summary: Put Repo
       operationId: pierone.api/put-repo
@@ -233,6 +254,10 @@ paths:
       responses:
         "200":
           description: Return list of image IDs
+          schema:
+            type: array
+            items:
+              type: string
         "404":
           description: Image ID does not exist
       description: ""
@@ -245,6 +270,11 @@ paths:
       responses:
         "200":
           description: Docker Registry v1 is available
+          headers:
+            "X-Docker-Registry-Version":
+              type: string
+          schema:
+            type: boolean
       description: ""
       summary: Ping
       operationId: pierone.api/ping
