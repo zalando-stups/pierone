@@ -127,7 +127,7 @@
   (is (= 200 (:status (with-redefs [mock-list-objects (constantly nil)]
                         (mock-app (mock/request :get "/v1/search?q="))))))
 
-  (is (= "{\"results\":[{\"name\":\"foo\\/bar\"}]}" (:body (with-redefs [mock-list-objects (constantly ["repositories/foo/bar/1.0.tags"])]
+  (is (= "{\"results\":[{\"name\":\"foo\\/bar\"}]}" (:body (with-redefs [mock-list-objects (constantly ["repositories/foo/bar/1.0.tags", "repositories/foo/bar/2.0.tags"])]
                         (mock-app (mock/request :get "/v1/search?q="))))))
 
   (is (= "{\"results\":[]}" (:body (with-redefs [mock-list-objects (constantly ["repositories/foo/bar/1.0.tags"])]

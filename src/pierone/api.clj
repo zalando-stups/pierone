@@ -215,6 +215,9 @@
 (defn join-path [coll]
   (clojure.string/join "/" coll))
 
+(defn uniq [coll]
+  (seq (into #{} coll)))
+
 (defn get-repo-name [path]
   (let [take2 (fn [l] (take 2 l))]
        (-> path
@@ -228,7 +231,7 @@
   (let [query (get-in request [:parameters :query :q])
         path "repositories/"
         repo-paths (backend/list-objects backend path)
-        repo-names (map get-repo-name repo-paths)
+        repo-names (uniq (map get-repo-name repo-paths))
         filtered-names (filter #(.contains % (or query "")) repo-names)
         results (map (fn [n] {:name n}) filtered-names)]
     (json-response {:results results})
