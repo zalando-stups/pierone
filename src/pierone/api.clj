@@ -237,4 +237,9 @@
     (json-response {:results results})
     ))
 
+(defn get-repositories [request backend]
+  (let [path "repositories/"
+        repo-paths (backend/list-objects backend path)
+        repo-names (uniq (map get-repo-name repo-paths))]
+    (json-response repo-names)))
 

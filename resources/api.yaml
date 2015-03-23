@@ -3,7 +3,6 @@ info:
   version: "1.0"
   title: Pier One API
   description: Docker Registry
-host: pierone.stups.zalan.do
 basePath: /
 schemes:
   - https
@@ -15,9 +14,26 @@ paths:
       operationId: pierone.api/index
       responses:
         "200":
-          description: Human-readable home page
+          description: No response was specified
       produces:
         - text/html
+      tags:
+        - Pier One API
+  /repositories:
+    get:
+      summary: List repositories
+      operationId: pierone.api/get-repositories
+      responses:
+        "200":
+          description: Return list of repository names
+          schema:
+            type: array
+            items:
+              type: string
+      produces:
+        - application/json
+      tags:
+        - Pier One API
   /v2/:
     get:
       summary: Check v2
@@ -28,6 +44,8 @@ paths:
           description: v2 is not available
       produces:
         - application/json
+      tags:
+        - Docker API v2
   /v1/search:
     get:
       parameters:
@@ -48,14 +66,15 @@ paths:
                   properties:
                     name:
                       type: string
-
+                
       description: ""
       summary: Search
       operationId: pierone.api/search
       produces:
         - application/json
-
-
+      tags:
+        - Docker API v1
+      
   /v1/repositories/{repo1}/{repo2}/tags:
     get:
       parameters:
@@ -77,6 +96,8 @@ paths:
       operationId: pierone.api/get-tags
       produces:
         - application/json
+      tags:
+        - Docker API v1
   /v1/repositories/{repo1}/{repo2}/tags/{tag}:
     put:
       parameters:
@@ -102,6 +123,8 @@ paths:
       operationId: pierone.api/put-tag
       produces:
         - application/json
+      tags:
+        - Docker API v1
   /v1/repositories/{repo1}/{repo2}/:
     put:
       parameters:
@@ -117,7 +140,7 @@ paths:
         "200":
           description: No response was specified
           headers:
-            "X-Docker-Token":
+            "X-Docker-Token": 
               type: string
             "X-Docker-Endpoints":
               type: string
@@ -128,7 +151,8 @@ paths:
       operationId: pierone.api/put-repo
       produces:
         - application/json
-
+      tags:
+        - Docker API v1
   /v1/repositories/{repo1}/{repo2}/images:
     put:
       parameters:
@@ -148,6 +172,8 @@ paths:
       operationId: pierone.api/put-images
       produces:
         - application/json
+      tags:
+        - Docker API v1
     get:
       parameters:
         - name: repo1
@@ -166,6 +192,8 @@ paths:
       operationId: pierone.api/get-images
       produces:
         - application/json
+      tags:
+        - Docker API v1
   /v1/images/{image}/json:
     put:
       parameters:
@@ -181,6 +209,8 @@ paths:
       operationId: pierone.api/put-image-json
       produces:
         - application/json
+      tags:
+        - Docker API v1
     get:
       parameters:
         - name: image
@@ -198,6 +228,8 @@ paths:
       operationId: pierone.api/get-image-json
       produces:
         - application/json
+      tags:
+        - Docker API v1
   /v1/images/{image}/layer:
     put:
       parameters:
@@ -213,6 +245,8 @@ paths:
       operationId: pierone.api/put-image-layer
       produces:
         - application/json
+      tags:
+        - Docker API v1
     get:
       parameters:
         - name: image
@@ -229,6 +263,8 @@ paths:
       operationId: pierone.api/get-image-layer
       produces:
         - application/octet-stream
+      tags:
+        - Docker API v1
   /v1/images/{image}/checksum:
     put:
       parameters:
@@ -244,6 +280,8 @@ paths:
       operationId: pierone.api/put-image-checksum
       produces:
         - application/json
+      tags:
+        - Docker API v1
   /v1/images/{image}/ancestry:
     get:
       parameters:
@@ -265,6 +303,8 @@ paths:
       operationId: pierone.api/get-image-ancestry
       produces:
         - application/json
+      tags:
+        - Docker API v1
   /v1/_ping:
     get:
       responses:
@@ -280,4 +320,6 @@ paths:
       operationId: pierone.api/ping
       produces:
         - application/json
+      tags:
+        - Docker API v1
 

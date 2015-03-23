@@ -139,5 +139,7 @@
 (deftest test-get-repo-name
   (is (= "foo/bar" (get-repo-name "repositories/foo/bar/tags/1.0.json"))))
 
+(deftest test-app-get-repositories
 
-
+  (is (= "[\"foo\\/bar\"]" (:body (with-redefs [mock-list-objects (constantly ["repositories/foo/bar/1.0.tags", "repositories/foo/bar/2.0.tags"])]
+                        (mock-app (mock/request :get "/repositories")))))))
