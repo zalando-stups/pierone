@@ -125,4 +125,19 @@
 (deftest test-app-search
 
   (is (= 200 (:status (with-redefs [mock-list-objects (constantly nil)]
-                        (mock-app (mock/request :get "/v1/search?q=")))))))
+                        (mock-app (mock/request :get "/v1/search?q="))))))
+
+  (is (= "{\"results\":[{\"name\":\"foo\\/bar\"}]}" (:body (with-redefs [mock-list-objects (constantly ["repositories/foo/bar/1.0.tags"])]
+                        (mock-app (mock/request :get "/v1/search?q="))))))
+
+  (is (= "{\"results\":[]}" (:body (with-redefs [mock-list-objects (constantly ["repositories/foo/bar/1.0.tags"])]
+                        (mock-app (mock/request :get "/v1/search?q=blub"))))))
+
+  (is (= "{\"results\":[{\"name\":\"foo\\/bar\"}]}" (:body (with-redefs [mock-list-objects (constantly ["repositories/foo/bar/1.0.tags"])]
+                        (mock-app (mock/request :get "/v1/search?q=foo")))))))
+
+(deftest test-get-repo-name
+  (is (= "foo/bar" (get-repo-name "repositories/foo/bar/tags/1.0.json"))))
+
+
+

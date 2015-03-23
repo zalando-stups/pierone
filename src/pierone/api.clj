@@ -212,9 +212,26 @@
       (-> (json-response "Image not found")
           (status 404)))))
 
+(defn join-path [coll]
+  (clojure.string/join "/" coll))
+
+(defn get-repo-name [path]
+  (let [take2 (fn [l] (take 2 l))]
+       (-> path
+           (.split "/")
+           seq
+           rest
+           take2
+           join-path)))
+
 (defn search [request backend]
-  (let [query (get-in request [:parameters :path :q])]
-    (json-response {:results []})
+  (let [query (get-in request [:parameters :query :q])
+        path "repositories/"
+        repo-paths (backend/list-objects backend path)
+        repo-names (map get-repo-name repo-paths)
+        filtered-names (filter #(.contains % (or query "")) repo-names)
+        results (map (fn [n] {:name n}) filtered-names)]
+    (json-response {:results results})
     ))
 
 
