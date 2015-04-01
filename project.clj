@@ -20,7 +20,22 @@
 
             :plugins [[lein-cloverage "1.0.2"]
                       [lein-ring "0.9.2"]
-                      [lein-kibit "0.0.8"]]
+                      [lein-kibit "0.0.8"]
+                      [io.sarnowski/lein-docker "1.0.0"]]
+
+            :docker {:image-name "stups/pierone"}
+
+            :release-tasks [["vcs" "assert-committed"]
+                            ["change" "version" "leiningen.release/bump-version" "release"]
+                            ["vcs" "commit"]
+                            ["vcs" "tag"]
+                            ["clean"]
+                            ["uberjar"]
+                            ["docker" "build"]
+                            ["docker" "push"]
+                            ["change" "version" "leiningen.release/bump-version"]
+                            ["vcs" "commit"]
+                            ["vcs" "push"]]
 
             :aliases {"cloverage" ["with-profile" "test" "cloverage"]}
 
