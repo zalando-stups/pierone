@@ -47,8 +47,7 @@ Building
 
 .. code-block:: bash
 
-    $ lein uberjar
-    $ docker build -t stups/pierone .
+    $ lein do uberjar, docker build
 
 Running
 =======
@@ -57,14 +56,10 @@ Pier One supports a number of environment variables to use the Amazon S3 backend
 
 .. code-block:: bash
 
-    $ docker run -it -p 8080:8080 -e BACKEND=s3 -e S3_BUCKET_NAME=my-bucket -e AWS_REGION_ID=eu-central-1 stups/pierone
+    $ docker run -it -p 8080:8080 -e BACKEND_S3_BUCKET_NAME=my-bucket stups/pierone
 
-``BACKEND``
-    The backend to use, can be "file" or "s3".
-``S3_BUCKET_NAME``
+``BACKEND_S3_BUCKET_NAME``
     Only for S3 backend: the Amazon S3 bucket name.
-``AWS_REGION_ID``
-    Only for S3 backend: the AWS region ID (e.g. "eu-central-1").
 
 .. _Leiningen: http://leiningen.org/
 

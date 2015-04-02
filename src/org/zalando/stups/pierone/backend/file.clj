@@ -1,13 +1,12 @@
-(ns pierone.backend.file
+(ns org.zalando.stups.pierone.backend.file
   (:require [com.stuartsierra.component :as component]
-            [clojure.tools.logging :as log]
-            [pierone.backend :refer [Backend as-bytes]])
-  (:import
-    [java.nio.file.attribute FileAttribute]
-    [java.nio.file Files]
-    [java.nio.file OpenOption]
-    [java.nio.file Paths]
-    [java.nio.file Path]))
+            [org.zalando.stups.friboo.log :as log]
+            [org.zalando.stups.pierone.backend :refer [Backend as-bytes]])
+  (:import (java.nio.file.attribute FileAttribute)
+           (java.nio.file Files)
+           (java.nio.file OpenOption)
+           (java.nio.file Paths)
+           (java.nio.file Path)))
 
 (defn create-dirs [path]
   (Files/createDirectories path (into-array FileAttribute [])))
@@ -17,8 +16,9 @@
   component/Lifecycle
 
   (start [this]
-    (log/info "Starting file backend using data path" (str data-path))
-    this)
+    (let [data-path (or data-path (Paths/get "data" (make-array String 0)))]
+      (log/info "Starting file backend using data path %s." (str data-path))
+      (assoc this :data-path data-path)))
 
   (stop [this] this)
 
@@ -39,6 +39,3 @@
                                                                   (.resolve data-path)
                                                                   .toFile
                                                                   .listFiles))))
-
-(defn new-file-backend []
-  (map->FileBackend {:data-path (Paths/get "data" (make-array String 0))}))

@@ -1,8 +1,8 @@
-(ns pierone.backend.s3-test
+(ns org.zalando.stups.pierone.backend.s3-test
   (:require
     [clojure.test :refer :all]
-    [pierone.backend.s3 :refer :all]
-    [pierone.backend :as backend]
+    [org.zalando.stups.pierone.backend.s3 :refer :all]
+    [org.zalando.stups.pierone.backend :as backend]
     [amazonica.aws.s3 :as aws]
     [com.stuartsierra.component :as component])
   (:import
@@ -18,7 +18,7 @@
 
 (deftest test-s3-backend
   (let [
-        backend (new-s3-backend "my-bucket" "eu-central-1")]
+        backend (map->S3Backend {:bucket "my-bucket"})]
 
     (is (component/start backend))
     (is (component/stop backend))

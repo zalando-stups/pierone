@@ -1,4 +1,4 @@
-(ns pierone.backend
+(ns org.zalando.stups.pierone.backend
   (:import (java.io ByteArrayInputStream InputStream)
            (org.apache.commons.io IOUtils)))
 

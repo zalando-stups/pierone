@@ -7,22 +7,10 @@ basePath: /
 schemes:
   - https
 paths:
-  /:
-    get:
-      summary: Index
-      description: "Home page"
-      operationId: pierone.api/index
-      responses:
-        "200":
-          description: No response was specified
-      produces:
-        - text/html
-      tags:
-        - Pier One API
   /repositories:
     get:
       summary: List repositories
-      operationId: pierone.api/get-repositories
+      operationId: org.zalando.stups.pierone.api/get-repositories
       responses:
         "200":
           description: Return list of repository names
@@ -38,7 +26,7 @@ paths:
     get:
       summary: Check v2
       description: "Endpoint to check for V2(.1) registry API"
-      operationId: pierone.api/check-v2
+      operationId: org.zalando.stups.pierone.api/check-v2
       responses:
         "404":
           description: v2 is not available
@@ -69,7 +57,7 @@ paths:
                 
       description: ""
       summary: Search
-      operationId: pierone.api/search
+      operationId: org.zalando.stups.pierone.api/search
       produces:
         - application/json
       tags:
@@ -93,7 +81,7 @@ paths:
           description: Repository/tags not found
       description: ""
       summary: Get Tags
-      operationId: pierone.api/get-tags
+      operationId: org.zalando.stups.pierone.api/get-tags
       produces:
         - application/json
       tags:
@@ -120,7 +108,7 @@ paths:
           description: Tag already exists
       description: ""
       summary: Put Tag
-      operationId: pierone.api/put-tag
+      operationId: org.zalando.stups.pierone.api/put-tag
       produces:
         - application/json
       tags:
@@ -148,7 +136,7 @@ paths:
             type: string
       description: ""
       summary: Put Repo
-      operationId: pierone.api/put-repo
+      operationId: org.zalando.stups.pierone.api/put-repo
       produces:
         - application/json
       tags:
@@ -169,7 +157,7 @@ paths:
           description: No response was specified
       description: ""
       summary: Put Images
-      operationId: pierone.api/put-images
+      operationId: org.zalando.stups.pierone.api/put-images
       produces:
         - application/json
       tags:
@@ -189,7 +177,7 @@ paths:
           description: No response was specified
       description: ""
       summary: Get Images
-      operationId: pierone.api/get-images
+      operationId: org.zalando.stups.pierone.api/get-images
       produces:
         - application/json
       tags:
@@ -206,7 +194,7 @@ paths:
           description: Image JSON was stored successfully
       description: ""
       summary: Put Image JSON
-      operationId: pierone.api/put-image-json
+      operationId: org.zalando.stups.pierone.api/put-image-json
       produces:
         - application/json
       tags:
@@ -225,7 +213,7 @@ paths:
           description: Image does not exist
       description: ""
       summary: Get Image JSON
-      operationId: pierone.api/get-image-json
+      operationId: org.zalando.stups.pierone.api/get-image-json
       produces:
         - application/json
       tags:
@@ -242,7 +230,7 @@ paths:
           description: Image layer data was stored successfully
       description: ""
       summary: Put Image Layer
-      operationId: pierone.api/put-image-layer
+      operationId: org.zalando.stups.pierone.api/put-image-layer
       produces:
         - application/json
       tags:
@@ -260,7 +248,7 @@ paths:
           description: Image layer does not exist
       description: ""
       summary: Get Image Layer
-      operationId: pierone.api/get-image-layer
+      operationId: org.zalando.stups.pierone.api/get-image-layer
       produces:
         - application/octet-stream
       tags:
@@ -277,7 +265,7 @@ paths:
           description: No response was specified
       description: ""
       summary: Put Image Checksum
-      operationId: pierone.api/put-image-checksum
+      operationId: org.zalando.stups.pierone.api/put-image-checksum
       produces:
         - application/json
       tags:
@@ -300,7 +288,7 @@ paths:
           description: Image ID does not exist
       description: ""
       summary: Get Image ancestry
-      operationId: pierone.api/get-image-ancestry
+      operationId: org.zalando.stups.pierone.api/get-image-ancestry
       produces:
         - application/json
       tags:
@@ -317,7 +305,7 @@ paths:
             type: boolean
       description: ""
       summary: Ping
-      operationId: pierone.api/ping
+      operationId: org.zalando.stups.pierone.api/ping
       produces:
         - application/json
       tags:

@@ -1,8 +1,8 @@
-(ns pierone.backend.file-test
+(ns org.zalando.stups.pierone.backend.file-test
   (:require
     [clojure.test :refer :all]
-    [pierone.backend.file :refer :all]
-    [pierone.backend :as backend]
+    [org.zalando.stups.pierone.backend.file :refer :all]
+    [org.zalando.stups.pierone.backend :as backend]
     [com.stuartsierra.component :as component])
   (:import
     [java.nio.file Files]
