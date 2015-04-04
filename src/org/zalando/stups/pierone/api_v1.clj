@@ -48,7 +48,7 @@
                    (fn [tags tag]
                      (merge tags {(:name tag)
                                   (:image tag)}))
-                   tags)]
+                   {} tags)]
         (resp tags request)))))
 
 (defn put-tag
@@ -60,7 +60,7 @@
     (resp "OK" request)
 
     (catch SQLException e
-      (if (.endsWith name "-SNAPSHOT")
+      (if (.endsWith (:name parameters) "-SNAPSHOT")
         (sql/update-tag! parameters {:connection db})
         (do
           (log/warn "Prevented update of tag: %s" (str e))
@@ -84,7 +84,7 @@
     (sql/create-image!
       {:image    image
        :metadata (json/write-str metadata)
-       :parent   (get metadata "parent")}
+       :parent   (:parent metadata)}
       {:connection db})
     (log/debug "Stored new image metadata %s." image)
     (resp "OK" request)
@@ -132,7 +132,7 @@
               (if exists?
                 (if parent
                   (recur (conj images image) parent)
-                  [image])
+                  (conj images image))
                 [])))
         ancestry (f [] image)]
     (if (empty? ancestry)
