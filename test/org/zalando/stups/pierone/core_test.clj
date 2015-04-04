@@ -30,12 +30,16 @@
 (deftest integration-tests
 
   ; setup system
+  ; TODO use embedded db (h2, postgresql mode)
+  ; TODO ?? use nolisten? true configuration and only handler?? maybe not in order to also test jetty behaviour
+  ; TODO ?? use in-memory storage implementation ?? maybe not in order to have real impl covered
+  ; TODO aws tests?
   (let [system (run {})]
 
     ; v1 compatibility check
     (expect "ping" 200 (client/get (url "/_ping") {:throw-exceptions false}))
 
-    ; push some images
+    ; push all images
     (doseq [[_ img] test-images]
       (expect "no metadata"
               404 (client/get (url "/images/" (:id img) "/json") {:throw-exceptions false}))
@@ -43,5 +47,19 @@
               200 (client/put (url "/images/" (:id img) "/json") {:body (:metadata img) :throw-exceptions false}))
       (expect "upload data"
               200 (client/put (url "/images/" (:id img) "/layer") {:body (:data img) :throw-exceptions false})))
+
+    ; TODO push image again -> fail
+    ; TODO push image metadata -> ok
+    ; TODO push image metadata again -> ok
+
+    ; TODO check ancestry -> all images in ancestry
+
+    ; TODO pull images -> all images available
+
+    ; TODO tag image -> ok
+    ; TODO tag image again -> not ok
+
+    ; TODO tag -SNAPSHOT image -> ok
+    ; TODO tag -SNAPSHOT image again -> ok
 
     (component/stop system)))
