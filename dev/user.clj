@@ -38,7 +38,7 @@
   "Starts the system running, sets the Var #'system."
   []
   (alter-var-root #'system
-                  (constantly (org.zalando.stups.pierone.core/run {:system-log-level "DEBUG"}))))
+                  (constantly (org.zalando.stups.pierone.core/run {}))))
 
 (defn stop
   "Stops the system if it is currently running, updates the Var

@@ -1,46 +1,64 @@
 swagger: "2.0"
+
 info:
-  version: "1.0"
+  version: "0.1"
   title: Pier One API
   description: Docker Registry
+
 basePath: /
 schemes:
   - https
+
+consumes:
+  - application/json
+produces:
+  - application/json
+
 paths:
-  /repositories:
-    get:
-      summary: List repositories
-      operationId: org.zalando.stups.pierone.api/get-repositories
-      responses:
-        "200":
-          description: Return list of repository names
-          schema:
-            type: array
-            items:
-              type: string
-      produces:
-        - application/json
-      tags:
-        - Pier One API
+
+  ## Docker Registry API v2
+
   /v2/:
     get:
-      summary: Check v2
-      description: "Endpoint to check for V2(.1) registry API"
-      operationId: org.zalando.stups.pierone.api/check-v2
+      summary: check compatibility
+      description: Checks for compatibility with Docker Registry v2.
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/ping
       responses:
         "404":
           description: v2 is not available
-      produces:
-        - application/json
+
+  ## Docker Registry API v1
+
+  /v1/_ping:
+    get:
+      summary: check compatibility
+      description: Checks for compatibility with Docker Registry v1.
       tags:
-        - Docker API v2
+          - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/ping
+      responses:
+        "200":
+          description: Docker Registry v1 is available
+          headers:
+            "X-Docker-Registry-Version":
+              type: string
+          schema:
+            type: boolean
+
   /v1/search:
     get:
+      summary: search repositories
+      description: Search for repositories in the registry.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/search
       parameters:
         - name: q
           in: query
-          type: string
           description: Search string to match repository names
+          type: string
       responses:
         "200":
           description: Return list of matching repository names
@@ -54,23 +72,22 @@ paths:
                   properties:
                     name:
                       type: string
-                
-      description: ""
-      summary: Search
-      operationId: org.zalando.stups.pierone.api/search
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
-      
-  /v1/repositories/{repo1}/{repo2}/tags:
+
+  ### Tags
+
+  /v1/repositories/{team}/{artifact}/tags:
     get:
+      summary: list tags
+      description: Lists all tags of an artifact.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/get-tags
       parameters:
-        - name: repo1
+        - name: team
           in: path
           type: string
           required: true
-        - name: repo2
+        - name: artifact
           in: path
           type: string
           required: true
@@ -79,26 +96,29 @@ paths:
           description: Map of tags to image IDs
         "404":
           description: Repository/tags not found
-      description: ""
-      summary: Get Tags
-      operationId: org.zalando.stups.pierone.api/get-tags
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
-  /v1/repositories/{repo1}/{repo2}/tags/{tag}:
+
+  /v1/repositories/{team}/{artifact}/tags/{name}:
     put:
+      summary: store tag
+      description: Stores a tag in the registry for the given artifact.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/put-tag
       parameters:
-        - name: repo1
+        - name: team
           in: path
           type: string
           required: true
-        - name: repo2
+        - name: artifact
           in: path
           type: string
           required: true
-        - name: tag
+        - name: name
           in: path
+          type: string
+          required: true
+        - name: image
+          in: body
           type: string
           required: true
       responses:
@@ -106,21 +126,19 @@ paths:
           description: Tag was stored successfully
         "409":
           description: Tag already exists
-      description: ""
-      summary: Put Tag
-      operationId: org.zalando.stups.pierone.api/put-tag
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
-  /v1/repositories/{repo1}/{repo2}/:
+
+  /v1/repositories/{team}/{artifact}/:
     put:
+      summary: dummy
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/put-repo
       parameters:
-        - name: repo1
+        - name: team
           in: path
           type: string
           required: true
-        - name: repo2
+        - name: artifact
           in: path
           type: string
           required: true
@@ -134,108 +152,112 @@ paths:
               type: string
           schema:
             type: string
-      description: ""
-      summary: Put Repo
-      operationId: org.zalando.stups.pierone.api/put-repo
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
-  /v1/repositories/{repo1}/{repo2}/images:
+
+  ### Images
+
+  /v1/repositories/{team}/{artifact}/images:
     put:
+      summary: dummy
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/put-images
       parameters:
-        - name: repo1
+        - name: team
           in: path
           type: string
           required: true
-        - name: repo2
+        - name: artifact
           in: path
           type: string
           required: true
       responses:
-        "200":
+        "204":
           description: No response was specified
-      description: ""
-      summary: Put Images
-      operationId: org.zalando.stups.pierone.api/put-images
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
+
     get:
+      summary: dummy
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/get-images
       parameters:
-        - name: repo1
+        - name: team
           in: path
           type: string
           required: true
-        - name: repo2
+        - name: artifact
           in: path
           type: string
           required: true
       responses:
         "200":
           description: No response was specified
-      description: ""
-      summary: Get Images
-      operationId: org.zalando.stups.pierone.api/get-images
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
+
   /v1/images/{image}/json:
     put:
+      summary: store image metadata
+      description: Stores the JSON metadata of a Docker image layer.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/put-image-json
       parameters:
         - name: image
           in: path
+          type: string
+          required: true
+        - name: metadata
+          in: body
           type: string
           required: true
       responses:
         "200":
           description: Image JSON was stored successfully
-      description: ""
-      summary: Put Image JSON
-      operationId: org.zalando.stups.pierone.api/put-image-json
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
+
     get:
+      summary: read image metadata
+      description: Reads the JSON metadata of a Docker image layer.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/get-image-json
       parameters:
         - name: image
           in: path
           type: string
           required: true
-
       responses:
         "200":
           description: No response was specified
         "404":
           description: Image does not exist
-      description: ""
-      summary: Get Image JSON
-      operationId: org.zalando.stups.pierone.api/get-image-json
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
+
   /v1/images/{image}/layer:
     put:
+      summary: store image binary
+      description: Stores the binary data of a Docker image.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/put-image-binary
+      consumes:
+        - application/octet-stream
       parameters:
         - name: image
           in: path
           type: string
           required: true
+        - name: data
+          in: body
+          required: true
       responses:
         "200":
           description: Image layer data was stored successfully
-      description: ""
-      summary: Put Image Layer
-      operationId: org.zalando.stups.pierone.api/put-image-layer
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
+
     get:
+      summary: read image binary
+      description: Reads the binary data of a Docker image.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/get-image-binary
+      produces:
+        - application/octet-stream
       parameters:
         - name: image
           in: path
@@ -246,15 +268,14 @@ paths:
           description: Return binary layer data
         "404":
           description: Image layer does not exist
-      description: ""
-      summary: Get Image Layer
-      operationId: org.zalando.stups.pierone.api/get-image-layer
-      produces:
-        - application/octet-stream
-      tags:
-        - Docker API v1
+
   /v1/images/{image}/checksum:
     put:
+      summary: check image
+      description: Checks an image with a checksum.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/put-image-checksum
       parameters:
         - name: image
           in: path
@@ -263,15 +284,14 @@ paths:
       responses:
         "200":
           description: No response was specified
-      description: ""
-      summary: Put Image Checksum
-      operationId: org.zalando.stups.pierone.api/put-image-checksum
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
+
   /v1/images/{image}/ancestry:
     get:
+      summary: read image ancestry
+      description: Returns the whole ancestry for an image.
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/get-image-ancestry
       parameters:
         - name: image
           in: path
@@ -286,28 +306,3 @@ paths:
               type: string
         "404":
           description: Image ID does not exist
-      description: ""
-      summary: Get Image ancestry
-      operationId: org.zalando.stups.pierone.api/get-image-ancestry
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
-  /v1/_ping:
-    get:
-      responses:
-        "200":
-          description: Docker Registry v1 is available
-          headers:
-            "X-Docker-Registry-Version":
-              type: string
-          schema:
-            type: boolean
-      description: ""
-      summary: Ping
-      operationId: org.zalando.stups.pierone.api/ping
-      produces:
-        - application/json
-      tags:
-        - Docker API v1
-

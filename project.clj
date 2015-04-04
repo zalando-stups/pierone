@@ -9,12 +9,9 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.zalando.stups/friboo "0.5.0-SNAPSHOT"]
 
-                 [org.clojure/data.json "0.2.6"]
-
                  [yesql "0.5.0-rc2"]
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
 
-                 [commons-io/commons-io "2.4"]
                  [amazonica "0.3.19"]]
 
   :main ^:skip-aot org.zalando.stups.pierone.core
