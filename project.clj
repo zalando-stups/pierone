@@ -38,11 +38,11 @@
 
   :profiles {:uberjar {:aot :all}
 
-             :test    {:dependencies [[ring/ring-mock "0.2.0"]]}
+             :test    {:dependencies [[clj-http-lite "0.2.1"]]}
 
              :dev     {:repl-options {:init-ns user}
                        :source-paths ["dev"]
                        :dependencies [[org.clojure/tools.namespace "0.2.10"]
                                       [org.clojure/java.classpath "0.2.2"]
-                                      [ring/ring-mock "0.2.0"]]}})
+                                      [clj-http-lite "0.2.1"]]}})
 
