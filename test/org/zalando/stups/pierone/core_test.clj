@@ -3,7 +3,8 @@
             [clj-http.lite.client :as client]
             [com.stuartsierra.component :as component]
             [clojure.java.io :as io]
-            [org.zalando.stups.pierone.core :refer [run]]))
+            [org.zalando.stups.pierone.core :refer [run]]
+            [clojure.java.jdbc :as jdbc]))
 
 (def test-url "http://localhost:8080")
 
@@ -27,14 +28,21 @@
   (is (= "localhost:8080" (get (:headers result) "x-docker-endpoints")) msg)
   (:body result))
 
+; TODO use embedded db (h2, postgresql mode)
+; TODO ?? use nolisten? true configuration and only handler?? maybe not in order to also test jetty behaviour
+; TODO ?? use in-memory storage implementation ?? maybe not in order to have real impl covered
+; TODO aws tests?
+(defn setup []
+  (let [system (run {})]
+    (doseq [[_ image] test-images]
+      (jdbc/delete! (:db system) :image ["id = ?" (:id image)])
+      (println "Deleted image" (:id image) "from old tests."))
+    system))
+
 (deftest integration-tests
 
   ; setup system
-  ; TODO use embedded db (h2, postgresql mode)
-  ; TODO ?? use nolisten? true configuration and only handler?? maybe not in order to also test jetty behaviour
-  ; TODO ?? use in-memory storage implementation ?? maybe not in order to have real impl covered
-  ; TODO aws tests?
-  (let [system (run {})]
+  (let [system (setup)]
 
     ; v1 compatibility check
     (expect "ping" 200 (client/get (url "/_ping") {:throw-exceptions false}))
@@ -44,9 +52,12 @@
       (expect "no metadata"
               404 (client/get (url "/images/" (:id img) "/json") {:throw-exceptions false}))
       (expect "upload metadata"
-              200 (client/put (url "/images/" (:id img) "/json") {:body (:metadata img) :throw-exceptions false}))
+              200 (client/put (url "/images/" (:id img) "/json") {:body (:metadata img)
+                                                                  :throw-exceptions false
+                                                                  :content-type :json}))
       (expect "upload data"
-              200 (client/put (url "/images/" (:id img) "/layer") {:body (:data img) :throw-exceptions false})))
+              200 (client/put (url "/images/" (:id img) "/layer") {:body (:data img)
+                                                                   :throw-exceptions false})))
 
     ; TODO push image again -> fail
     ; TODO push image metadata -> ok
