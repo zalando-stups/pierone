@@ -4,7 +4,8 @@
             [com.stuartsierra.component :as component]
             [clojure.java.io :as io]
             [org.zalando.stups.pierone.core :refer [run]]
-            [clojure.java.jdbc :as jdbc]))
+            [clojure.java.jdbc :as jdbc]
+            [clojure.data.json :as json]))
 
 (def test-url "http://localhost:8080")
 
@@ -63,6 +64,10 @@
 
   ; setup system
   (let [system (setup)]
+
+    ; v2 compatibility check
+    (let [result (client/get (str test-url "/v2/") {:throw-exceptions false})]
+      (= 404 (:status result) "v2 compatibility"))
 
     ; v1 compatibility check
     (expect "ping" 200 (client/get (url "/_ping") {:throw-exceptions false}))
@@ -142,6 +147,16 @@
                                :content-type     :json
                                :throw-exceptions false}))
 
+      ; check tag list
+      (let [result (json/read-str (expect "list tags"
+                           200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
+                                           {:throw-exceptions false})))]
+        (= (count result) 1 "list tags: count")
+        (println result)
+        (let [[tag image] (first result)]
+          (= tag (:name test-tag) "list tags: tag")
+          (= image (:id root) "list tags: image")))
+
       ; tag -SNAPSHOT image -> ok
       (expect "tag snapshot"
               200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
@@ -155,5 +170,17 @@
                               {:body             (str "\"" (:id alternative) "\"")
                                :content-type     :json
                                :throw-exceptions false})))
+
+    ; dummy calls that have to exist
+    (expect "search" 200 (client/get (url "/search")
+                                     {:throw-exceptions false})) ; TODO implement search
+    (expect "create repositories" 200 (client/put (url "/repositories/ateam/anartifact/")
+                                                  {:throw-exceptions false}))
+    (expect "put images" 204 (client/put (url "/repositories/ateam/anartifact/images")
+                                         {:throw-exceptions false}))
+    (expect "get images" 200 (client/get (url "/repositories/ateam/anartifact/images")
+                                         {:throw-exceptions false}))
+    (expect "put checksum" 200 (client/put (url "/images/animage/checksum")
+                                           {:throw-exceptions false}))
 
     (component/stop system)))
