@@ -56,9 +56,9 @@ Pier One supports a number of environment variables to use the Amazon S3 backend
 
 .. code-block:: bash
 
-    $ docker run -it -p 8080:8080 -e BACKEND_S3_BUCKET_NAME=my-bucket stups/pierone
+    $ docker run -it -p 8080:8080 -e STORAGE_S3_BUCKET=my-bucket stups/pierone
 
-``BACKEND_S3_BUCKET_NAME``
+``STORAGE_S3_BUCKET``
     Only for S3 backend: the Amazon S3 bucket name.
 
 .. _Leiningen: http://leiningen.org/
