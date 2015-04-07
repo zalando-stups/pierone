@@ -6,6 +6,9 @@ jdk:
 addons:
   postgresql: "9.4"
 
+before_script:
+  - psql -c 'CREATE DATABASE pierone;' -U postgres
+
 after_script:
   - bash -ex coveralls.sh
 
