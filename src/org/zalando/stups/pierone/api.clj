@@ -1,5 +1,8 @@
 (ns org.zalando.stups.pierone.api
   (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
+            [org.zalando.stups.pierone.sql :as sql]
+            [ring.util.response :as ring]
+            [org.zalando.stups.friboo.ring :as fring]
             [org.zalando.stups.pierone.api-v2]
             [org.zalando.stups.pierone.api-v1]))
 
@@ -8,3 +11,24 @@
 
 (def default-http-configuration
   {:http-port 8080})
+
+(defn read-teams
+  "Lists all teams that have artifacts."
+  [_ _ db _]
+  (let [result (map :team (sql/list-teams {} {:connection db}))]
+    (-> (ring/response result)
+        (fring/content-type-json))))
+
+(defn read-artifacts
+  "Lists all artifacts of a team."
+  [parameters _ db _]
+  (let [result (map :artifact (sql/list-artifacts parameters {:connection db}))]
+    (-> (ring/response result)
+        (fring/content-type-json))))
+
+(defn read-tags
+  "Lists all tags of an artifact."
+  [parameters _ db _]
+  (let [result (map :name (sql/list-tags parameters {:connection db}))]
+    (-> (ring/response result)
+        (fring/content-type-json))))

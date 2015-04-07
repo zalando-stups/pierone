@@ -173,7 +173,7 @@
 
     ; dummy calls that have to exist
     (expect "search" 200 (client/get (url "/search")
-                                     {:throw-exceptions false})) ; TODO implement search
+                                     {:throw-exceptions false}))
     (expect "create repositories" 200 (client/put (url "/repositories/ateam/anartifact/")
                                                   {:throw-exceptions false}))
     (expect "put images" 204 (client/put (url "/repositories/ateam/anartifact/images")

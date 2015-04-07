@@ -11,5 +11,5 @@
    :db-user "postgres"
    :db-password "postgres"})
 
+(defqueries "db/pierone.sql")
 (defqueries "db/v1.sql")
-

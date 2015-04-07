@@ -306,3 +306,64 @@ paths:
               type: string
         "404":
           description: Image ID does not exist
+
+  ## Pier One API
+
+  /teams:
+    get:
+      summary: list teams
+      description: lists all teams that have artifacts
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/read-teams
+      responses:
+        "200":
+          description: Return list of team IDs
+          schema:
+            type: array
+            items:
+              type: string
+
+  /teams/{team}/artifacts:
+    get:
+      summary: list artifacts
+      description: lists all artifacts of a team
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/read-artifacts
+      parameters:
+        - name: team
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Return list of artifact IDs
+          schema:
+            type: array
+            items:
+              type: string
+
+  /teams/{team}/artifacts/{artifact}/tags:
+    get:
+      summary: list tags
+      description: lists all tags of an artifact
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/read-tags
+      parameters:
+        - name: team
+          in: path
+          required: true
+          type: string
+        - name: artifact
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Return list of tags
+          schema:
+            type: array
+            items:
+              type: string
