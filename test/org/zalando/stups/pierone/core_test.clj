@@ -8,35 +8,55 @@
 
 (def test-url "http://localhost:8080")
 
-(def test-images
-  {:img1 {:id       "img1"
-          :metadata "{\"id\": \"img1\", \"parent\": \"img2\"}"
-          :data     (io/input-stream (.getBytes "img1data"))}
-   :img2 {:id       "img2"
-          :metadata "{\"id\": \"img2\", \"parent\": \"img3\"}"
-          :data     (io/input-stream (.getBytes "img2data"))}
-   :img  {:id       "img3"
-          :metadata "{\"id\": \"img3\"}"
-          :data     (io/input-stream (.getBytes "img3data"))}})
+(def test-images-hierarchy
+  [{:id       "img1"
+    :metadata "{\"id\": \"img1\", \"parent\": \"img2\"}"
+    :data     (io/input-stream (.getBytes "img1data"))}
+   {:id       "img2"
+    :metadata "{\"id\": \"img2\", \"parent\": \"img3\"}"
+    :data     (io/input-stream (.getBytes "img2data"))}
+   {:id       "img3"
+    :metadata "{\"id\": \"img3\"}"
+    :data     (io/input-stream (.getBytes "img3data"))}])
+
+(def test-image-single
+  {:id       "img4"
+   :metadata "{\"id\": \"img4\"}"
+   :data     (io/input-stream (.getBytes "img4data"))})
+
+(def all-images
+  (conj test-images-hierarchy test-image-single))
+
+(def test-tag
+  {:team     "stups"
+   :artifact "kio"
+   :name     "1.0"})
+
+(def test-tag-snapshot
+  {:team     "stups"
+   :artifact "kio"
+   :name     "1.0-SNAPSHOT"})
+
+(def all-tags (conj [] test-tag test-tag-snapshot))
 
 (defn url [& path]
   (apply str test-url "/v1" path))
 
 (defn expect [msg http-code result]
-  (is (= (:status result) http-code) msg)
+  (is (= (:status result) http-code) (str msg ":" (:body result)))
   (is (= "0.6.3" (get (:headers result) "x-docker-registry-version")) msg)
   (is (= "localhost:8080" (get (:headers result) "x-docker-endpoints")) msg)
   (:body result))
 
-; TODO use embedded db (h2, postgresql mode)
-; TODO ?? use nolisten? true configuration and only handler?? maybe not in order to also test jetty behaviour
-; TODO ?? use in-memory storage implementation ?? maybe not in order to have real impl covered
 ; TODO aws tests?
 (defn setup []
   (let [system (run {})]
-    (doseq [[_ image] test-images]
+    (doseq [tag all-tags]
+      (jdbc/delete! (:db system) :tag ["team = ? AND artifact = ? AND name = ?" (:team tag) (:artifact tag) (:name tag)])
+      (println "Deleted tag" (:team tag) "/" (:artifact tag) ":" (:name tag) "from old tests if existed."))
+    (doseq [image all-images]
       (jdbc/delete! (:db system) :image ["id = ?" (:id image)])
-      (println "Deleted image" (:id image) "from old tests."))
+      (println "Deleted image" (:id image) "from old tests if existed."))
     system))
 
 (deftest integration-tests
@@ -48,29 +68,92 @@
     (expect "ping" 200 (client/get (url "/_ping") {:throw-exceptions false}))
 
     ; push all images
-    (doseq [[_ img] test-images]
+    (doseq [image test-images-hierarchy]
       (expect "no metadata"
-              404 (client/get (url "/images/" (:id img) "/json") {:throw-exceptions false}))
+              404 (client/get (url "/images/" (:id image) "/json")
+                              {:throw-exceptions false}))
       (expect "upload metadata"
-              200 (client/put (url "/images/" (:id img) "/json") {:body (:metadata img)
-                                                                  :throw-exceptions false
-                                                                  :content-type :json}))
+              200 (client/put (url "/images/" (:id image) "/json")
+                              {:body             (:metadata image)
+                               :throw-exceptions false
+                               :content-type     :json}))
       (expect "upload data"
-              200 (client/put (url "/images/" (:id img) "/layer") {:body (:data img)
-                                                                   :throw-exceptions false})))
+              200 (client/put (url "/images/" (:id image) "/layer")
+                              {:body             (:data image)
+                               :throw-exceptions false})))
 
-    ; TODO push image again -> fail
-    ; TODO push image metadata -> ok
-    ; TODO push image metadata again -> ok
+    ; push image again -> fail
+    (let [again (first test-images-hierarchy)]
+      (expect "push again"
+              409 (client/put (url "/images/" (:id again) "/json")
+                              {:body             (:metadata again)
+                               :throw-exceptions false
+                               :content-type     :json})))
+    ; pull images -> all images available
+    (doseq [image test-images-hierarchy]
+      (expect "pull metadata"
+              200 (client/get (url "/images/" (:id image) "/json")
+                              {:throw-exceptions false}))
+      (let [body (expect "pull metadata"
+                         200 (client/get (url "/images/" (:id image) "/layer")
+                                         {:throw-exceptions false}))]
+        (= body (:data image))))
 
-    ; TODO check ancestry -> all images in ancestry
+    ; check ancestry -> all images in ancestry
+    (let [root (first test-images-hierarchy)
+          ancestry (expect "pull metadata"
+                           200 (client/get (url "/images/" (:id root) "/ancestry")
+                                           {:throw-exceptions false}))
+          ancestry (into #{} ancestry)]
+      (= (count ancestry) (count test-images-hierarchy))
+      (doseq [image test-image-single]
+        (= true (ancestry (:id image)))))
 
-    ; TODO pull images -> all images available
+    ; push image metadata without binary data does not block a new upload
+    (expect "upload metadata"
+            200 (client/put (url "/images/" (:id test-image-single) "/json")
+                            {:body             (:metadata test-image-single)
+                             :throw-exceptions false
+                             :content-type     :json}))
+    (expect "upload metadata"
+            200 (client/put (url "/images/" (:id test-image-single) "/json")
+                            {:body             (:metadata test-image-single)
+                             :throw-exceptions false
+                             :content-type     :json}))
+    ; pulling an unfinished image isn't possible
+    (expect "no metadata"
+            404 (client/get (url "/images/" (:id test-image-single) "/json")
+                            {:throw-exceptions false}))
 
-    ; TODO tag image -> ok
-    ; TODO tag image again -> not ok
+    (let [root (first test-images-hierarchy)
+          alternative (second test-images-hierarchy)]
 
-    ; TODO tag -SNAPSHOT image -> ok
-    ; TODO tag -SNAPSHOT image again -> ok
+      ; tag image -> ok
+      (expect "tag release"
+              200 (client/put (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/" (:name test-tag))
+                              {:body             (str "\"" (:id root) "\"")
+                               :content-type     :json
+                               :throw-exceptions false}))
+
+      ; tag image again -> not ok
+      (expect "tag release again"
+              409 (client/put (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/" (:name test-tag))
+                              {:body             (str "\"" (:id alternative) "\"")
+                               :content-type     :json
+                               :throw-exceptions false}))
+
+      ; tag -SNAPSHOT image -> ok
+      (expect "tag snapshot"
+              200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
+                              {:body             (str "\"" (:id root) "\"")
+                               :content-type     :json
+                               :throw-exceptions false}))
+
+      ; tag -SNAPSHOT image again -> ok
+      (expect "tag snapshot again"
+              200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
+                              {:body             (str "\"" (:id alternative) "\"")
+                               :content-type     :json
+                               :throw-exceptions false})))
 
     (component/stop system)))

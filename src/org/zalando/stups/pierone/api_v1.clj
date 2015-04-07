@@ -61,7 +61,10 @@
 
     (catch SQLException e
       (if (.endsWith (:name parameters) "-SNAPSHOT")
-        (sql/update-tag! parameters {:connection db})
+        (do
+          (sql/update-tag! parameters {:connection db})
+          (log/info "Updated snapshot tag %s." parameters)
+          (resp "OK" request))
         (do
           (log/warn "Prevented update of tag: %s" (str e))
           (resp "tag already exists" request :status 409))))))
