@@ -18,7 +18,7 @@
   :uberjar-name "pierone.jar"
 
   :plugins [[lein-cloverage "1.0.2"]
-            [io.sarnowski/lein-docker "1.0.0"]]
+            [io.sarnowski/lein-docker "1.1.0"]]
 
   :docker {:image-name "stups/pierone"}
 
