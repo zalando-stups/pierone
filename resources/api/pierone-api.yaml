@@ -59,6 +59,7 @@ paths:
           in: query
           description: Search string to match repository names
           type: string
+          required: false
       responses:
         "200":
           description: Return list of matching repository names
@@ -119,8 +120,6 @@ paths:
           required: true
         - name: image
           in: body
-          type: string
-          required: true
       responses:
         "200":
           description: Tag was stored successfully
@@ -146,7 +145,7 @@ paths:
         "200":
           description: No response was specified
           headers:
-            "X-Docker-Token": 
+            "X-Docker-Token":
               type: string
             "X-Docker-Endpoints":
               type: string
@@ -206,8 +205,6 @@ paths:
           required: true
         - name: metadata
           in: body
-          type: string
-          required: true
       responses:
         "200":
           description: Image JSON was stored successfully
@@ -245,7 +242,6 @@ paths:
           required: true
         - name: data
           in: body
-          required: true
       responses:
         "200":
           description: Image layer data was stored successfully
