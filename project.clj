@@ -3,7 +3,7 @@
   :url "https://github.com/zalando-stups/pierone"
   :license {:name "Apache License"
             :url  "http://www.apache.org/licenses/"}
-
+  :scm {:url "git@github.com:zalando-stups/pierone"}
   :min-lein-version "2.0.0"
 
   :dependencies [[org.clojure/clojure "1.6.0"]
