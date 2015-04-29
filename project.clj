@@ -7,7 +7,9 @@
   :min-lein-version "2.0.0"
 
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.zalando.stups/friboo "0.6.0"]
+                 [org.zalando.stups/friboo "0.8.0"]
+                 ; TODO remove as soon as new friboo with 0.10.0 swagger1st is released
+                 [io.sarnowski/swagger1st "0.10.0-SNAPSHOT"]
 
                  [yesql "0.5.0-rc2"]
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
@@ -17,7 +19,7 @@
   :main ^:skip-aot org.zalando.stups.pierone.core
   :uberjar-name "pierone.jar"
 
-  :plugins [[lein-cloverage "1.0.2"]
+  :plugins [[lein-cloverage "1.0.3"]
             [io.sarnowski/lein-docker "1.1.0"]]
 
   :docker {:image-name "stups/pierone"}
@@ -47,4 +49,3 @@
                                       [org.clojure/java.classpath "0.2.2"]
                                       [clj-http-lite "0.2.1"]
                                       [org.clojure/java.jdbc "0.3.6"]]}})
-

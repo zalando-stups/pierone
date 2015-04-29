@@ -44,7 +44,7 @@
   (apply str test-url "/v1" path))
 
 (defn expect [msg http-code result]
-  (is (= (:status result) http-code) (str msg ":" (:body result)))
+  (is (= (:status result) http-code) (str msg ": " (:body result)))
   (is (= "0.6.3" (get (:headers result) "x-docker-registry-version")) msg)
   (is (= "localhost:8080" (get (:headers result) "x-docker-endpoints")) msg)
   (:body result))

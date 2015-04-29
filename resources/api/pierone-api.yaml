@@ -6,8 +6,6 @@ info:
   description: Docker Registry
 
 basePath: /
-schemes:
-  - https
 
 consumes:
   - application/json
@@ -120,6 +118,8 @@ paths:
           required: true
         - name: image
           in: body
+          schema:
+            description: tag metadata
       responses:
         "200":
           description: Tag was stored successfully
@@ -205,6 +205,8 @@ paths:
           required: true
         - name: metadata
           in: body
+          schema:
+            description: image metadata
       responses:
         "200":
           description: Image JSON was stored successfully
@@ -242,6 +244,8 @@ paths:
           required: true
         - name: data
           in: body
+          schema:
+            description: "binary"
       responses:
         "200":
           description: Image layer data was stored successfully
