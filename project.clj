@@ -7,9 +7,7 @@
   :min-lein-version "2.0.0"
 
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.zalando.stups/friboo "0.8.0"]
-                 ; TODO remove as soon as new friboo with 0.10.0 swagger1st is released
-                 [io.sarnowski/swagger1st "0.10.0-SNAPSHOT"]
+                 [org.zalando.stups/friboo "0.9.0"]
 
                  [yesql "0.5.0-rc2"]
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
