@@ -53,10 +53,10 @@
 (defn setup []
   (let [system (run {})]
     (doseq [tag all-tags]
-      (jdbc/delete! (:db system) :tag ["team = ? AND artifact = ? AND name = ?" (:team tag) (:artifact tag) (:name tag)])
+      (jdbc/delete! (:db system) :tags ["t_team = ? AND t_artifact = ? AND t_name = ?" (:team tag) (:artifact tag) (:name tag)])
       (println "Deleted tag" (:team tag) "/" (:artifact tag) ":" (:name tag) "from old tests if existed."))
     (doseq [image all-images]
-      (jdbc/delete! (:db system) :image ["id = ?" (:id image)])
+      (jdbc/delete! (:db system) :images ["i_id = ?" (:id image)])
       (println "Deleted image" (:id image) "from old tests if existed."))
     system))
 

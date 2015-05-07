@@ -1,16 +1,16 @@
 -- name: list-teams
-SELECT team
-  FROM tag
- GROUP BY team;
+SELECT t_team AS team
+  FROM tags
+ GROUP BY t_team;
 
 -- name: list-artifacts
-SELECT artifact
-  FROM tag
- WHERE team = :team
- GROUP BY artifact;
+SELECT t_artifact
+  FROM tags
+ WHERE t_team = :team
+ GROUP BY t_artifact;
 
 -- name: list-tags
-SELECT name
-  FROM tag
- WHERE team = :team
-   AND artifact = :artifact;
+SELECT t_name
+  FROM tags
+ WHERE t_team = :team
+   AND t_artifact = :artifact;

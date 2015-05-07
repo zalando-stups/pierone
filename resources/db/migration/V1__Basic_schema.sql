@@ -1,35 +1,38 @@
+CREATE SCHEMA zp_data;
+SET search_path TO zp_data;
+
 -- base entity: images
-CREATE TABLE image (
+CREATE TABLE images (
 
 -- the official image ID
-  id       TEXT NOT NULL,
+  i_id       TEXT NOT NULL,
 
 -- the JSON metadata of the image
-  metadata TEXT NOT NULL,
+  i_metadata TEXT NOT NULL,
 
 -- if the image was accepted (image binary and metadata are present)
-  accepted BOOL NOT NULL,
+  i_accepted BOOL NOT NULL,
 
 -- the parent image of this image
-  parent   TEXT,
+  i_parent_id   TEXT,
 
-  PRIMARY KEY (id)
+  PRIMARY KEY (i_id)
 );
 
 -- base entity: tags
-CREATE TABLE tag (
+CREATE TABLE tags (
 --the team ID
-  team     TEXT NOT NULL,
+  t_team     TEXT NOT NULL,
 
 -- the artifact name
-  artifact TEXT NOT NULL,
+  t_artifact TEXT NOT NULL,
 
 -- the artifact tag
-  name     TEXT NOT NULL,
+  t_name     TEXT NOT NULL,
 
 -- the referenced image
-  image    TEXT NOT NULL,
+  t_image_id    TEXT NOT NULL,
 
-  PRIMARY KEY (team, artifact, name),
-  FOREIGN KEY (image) REFERENCES image (id)
+  PRIMARY KEY (t_team, t_artifact, t_name),
+  FOREIGN KEY (t_image_id) REFERENCES images (i_id)
 );
