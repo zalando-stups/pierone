@@ -12,6 +12,20 @@ consumes:
 produces:
   - application/json
 
+definitions:
+  TagSummary:
+    type: object
+    properties:
+      name:
+        type: string
+        example: "1.0"
+      created:
+        type: string
+        example: 2015-05-07T15:49:51.230+0200
+      created_by:
+        type: string
+        example: hjacobs
+
 paths:
 
   ## Docker Registry API v2
@@ -366,4 +380,5 @@ paths:
           schema:
             type: array
             items:
-              type: string
+              $ref: "#/definitions/TagSummary"
+

@@ -16,6 +16,9 @@ CREATE TABLE images (
 -- the parent image of this image
   i_parent_id   TEXT,
 
+  i_created timestamp NOT NULL DEFAULT now(),
+  i_created_by TEXT,
+
   PRIMARY KEY (i_id)
 );
 
@@ -32,6 +35,9 @@ CREATE TABLE tags (
 
 -- the referenced image
   t_image_id    TEXT NOT NULL,
+
+  t_created timestamp NOT NULL DEFAULT now(),
+  t_created_by TEXT,
 
   PRIMARY KEY (t_team, t_artifact, t_name),
   FOREIGN KEY (t_image_id) REFERENCES images (i_id)

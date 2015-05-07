@@ -29,6 +29,6 @@
 (defn read-tags
   "Lists all tags of an artifact."
   [parameters _ db _]
-  (let [result (map :name (sql/list-tags parameters {:connection db}))]
+  (let [result (sql/list-tags parameters {:connection db})]
     (-> (ring/response result)
         (fring/content-type-json))))
