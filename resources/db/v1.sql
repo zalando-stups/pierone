@@ -32,6 +32,11 @@ UPDATE images
    SET i_accepted = TRUE
  WHERE i_id = :image;
 
+-- name: create-scm-source-data!
+INSERT INTO scm_source_data
+       (ssd_image_id, ssd_url, ssd_revision, ssd_author, ssd_status)
+VALUES (:image, :url, :revision, :author, :status);
+
 -- name: get-image-metadata
 SELECT i_metadata AS metadata
   FROM images

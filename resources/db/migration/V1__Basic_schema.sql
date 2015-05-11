@@ -22,6 +22,23 @@ CREATE TABLE images (
   PRIMARY KEY (i_id)
 );
 
+CREATE TABLE scm_source_data (
+  ssd_image_id TEXT NOT NULL,
+
+  ssd_url TEXT NOT NULL,
+
+  ssd_revision TEXT NOT NULL,
+
+  ssd_author TEXT NOT NULL,
+
+  ssd_status TEXT NOT NULL,
+
+  ssd_created timestamp NOT NULL DEFAULT now(),
+
+  PRIMARY KEY (ssd_image_id),
+  FOREIGN KEY (ssd_image_id) REFERENCES images (i_id)
+);
+
 -- base entity: tags
 CREATE TABLE tags (
 --the team ID

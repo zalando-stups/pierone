@@ -32,3 +32,9 @@
   (let [result (sql/list-tags parameters {:connection db})]
     (-> (ring/response result)
         (fring/content-type-json))))
+
+(defn get-scm-source
+  "Get SCM source information"
+  [parameters _ db _]
+  (-> (ring/response {})
+      (fring/content-type-json)))
