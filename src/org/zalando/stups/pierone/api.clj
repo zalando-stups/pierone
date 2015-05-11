@@ -36,5 +36,7 @@
 (defn get-scm-source
   "Get SCM source information"
   [parameters _ db _]
-  (-> (ring/response {})
-      (fring/content-type-json)))
+  (let [result (first (sql/get-scm-source parameters {:connection db}))]
+    (-> (ring/response result)
+        (ring/status (if result 200 404))
+        (fring/content-type-json))))

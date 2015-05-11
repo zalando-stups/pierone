@@ -16,3 +16,17 @@ SELECT t_name AS name,
   FROM tags
  WHERE t_team = :team
    AND t_artifact = :artifact;
+
+-- name: get-scm-source
+SELECT ssd_url AS url,
+       ssd_revision AS revision,
+       ssd_author AS author,
+       ssd_status AS status,
+       ssd_created AS created
+  FROM tags
+  JOIN scm_source_data
+    ON ssd_image_id = t_image_id
+ WHERE t_team = :team
+   AND t_artifact = :artifact
+   AND t_name = :tag;
+
