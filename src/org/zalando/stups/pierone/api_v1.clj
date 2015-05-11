@@ -5,6 +5,7 @@
             [clojure.data.json :as json]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
+            [schema.core :as schema]
             [org.zalando.stups.pierone.storage :as s])
   (:import (java.sql SQLException)
 
@@ -12,6 +13,12 @@
            (org.apache.commons.compress.compressors.gzip GzipCompressorInputStream)
            (org.apache.commons.compress.archivers.tar TarArchiveInputStream)
            (java.io FileInputStream File)))
+
+(schema/defschema ScmSourceInformation
+  {:url schema/Str
+   :revision schema/Str
+   :author schema/Str
+   :status schema/Str})
 
 (defn- resp
   "Returns a response including various Docker headers set."
@@ -112,7 +119,7 @@
 
 (defn extract-scm-source
   [file]
-  (json/read-str (slurp file) :key-fn keyword))
+  (schema/validate ScmSourceInformation (json/read-str (slurp file) :key-fn keyword)))
 
 (defn get-scm-source-data
   [tmp-file]
@@ -125,7 +132,7 @@
             (extract-scm-source tar-stream)
             (recur)))))
     (catch Exception e
-      (log/error e "Failed to read image layer")
+      (log/warn "Failed to read image layer: %s" (str e))
       nil)))
 
 (defn put-image-binary
