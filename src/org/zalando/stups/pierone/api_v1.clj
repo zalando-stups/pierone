@@ -110,20 +110,23 @@
       (resp "image not found" request :status 404)
       (resp (-> result first :metadata json/read-str) request))))
 
+(defn extract-scm-source
+  [file]
+  (json/read-str (slurp file) :key-fn keyword))
+
 (defn get-scm-source-data
   [tmp-file]
   (try
     (let [fis (FileInputStream. tmp-file)
-          tar (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
+          tar-stream (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
       (loop []
-        (when-let [entry (.getNextTarEntry tar)]
-          (log/info "Entry: %s" (.getName entry))
-          (recur))))
-    nil
+        (when-let [entry (.getNextTarEntry tar-stream)]
+          (if (= (.getName entry) "scm-source.json")
+            (extract-scm-source tar-stream)
+            (recur)))))
     (catch Exception e
       (log/error e "Failed to read image layer")
       nil)))
-
 
 (defn put-image-binary
   "Stores an image's binary data. Second call in upload sequence."
