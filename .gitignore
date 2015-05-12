@@ -6,3 +6,4 @@ target/
 pom.xml
 data/
 .nrepl*
+scm-source.json

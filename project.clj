@@ -1,4 +1,4 @@
-(defproject org.zalando.stups/pierone "0.1.0-SNAPSHOT"
+(defproject org.zalando.stups/pierone "0.1-SNAPSHOT"
   :description "Pier One Docker Registry"
   :url "https://github.com/zalando-stups/pierone"
   :license {:name "Apache License"
@@ -19,7 +19,8 @@
   :uberjar-name "pierone.jar"
 
   :plugins [[lein-cloverage "1.0.3"]
-            [io.sarnowski/lein-docker "1.1.0"]]
+            [io.sarnowski/lein-docker "1.1.0"]
+            [org.zalando.stups/lein-scm-source "0.1.0"]]
 
   :docker {:image-name "stups/pierone"}
 
@@ -29,6 +30,7 @@
                   ["vcs" "tag"]
                   ["clean"]
                   ["uberjar"]
+                  ["scm-source"]
                   ["docker" "build"]
                   ["docker" "push"]
                   ["change" "version" "leiningen.release/bump-version"]

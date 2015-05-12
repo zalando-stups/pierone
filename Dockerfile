@@ -10,4 +10,6 @@ EXPOSE 8080
 ENV HTTP_PORT 8080
 
 COPY target/pierone.jar /
+COPY scm-source.json /
+
 CMD java $(java-dynamic-memory-opts) -jar /pierone.jar
