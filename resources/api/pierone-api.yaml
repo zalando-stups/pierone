@@ -12,6 +12,35 @@ consumes:
 produces:
   - application/json
 
+definitions:
+  ScmSourceInformation:
+    type: object
+    properties:
+      url:
+        type: string
+        example: "git:git@github.com:zalando-stups/pierone.git"
+      revision:
+        type: string
+        example: cd768599e1bb41c38279c26254feff5cf57bf967
+      author:
+        type: string
+        example: hjacobs
+      status:
+        type: string
+        example: ""
+  TagSummary:
+    type: object
+    properties:
+      name:
+        type: string
+        example: "1.0"
+      created:
+        type: string
+        example: 2015-05-07T15:49:51.230+0200
+      created_by:
+        type: string
+        example: hjacobs
+
 paths:
 
   ## Docker Registry API v2
@@ -366,4 +395,34 @@ paths:
           schema:
             type: array
             items:
-              type: string
+              $ref: "#/definitions/TagSummary"
+
+  /teams/{team}/artifacts/{artifact}/tags/{tag}/scm-source:
+    get:
+      summary: Get scm-source.json
+      description: Get artifact's SCM source information (e.g. GIT commit)
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/get-scm-source
+      parameters:
+        - name: team
+          in: path
+          required: true
+          type: string
+        - name: artifact
+          in: path
+          required: true
+          type: string
+        - name: tag
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Return scm-source.json
+          schema:
+            $ref: "#/definitions/ScmSourceInformation"
+
+
+
+

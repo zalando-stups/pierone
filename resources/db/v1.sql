@@ -1,45 +1,50 @@
 -- name: read-tags
-SELECT name,
-       image
-  FROM tag
- WHERE team = :team
-   AND artifact = :artifact;
+SELECT t_name AS name,
+       t_image_id AS image
+  FROM tags
+ WHERE t_team = :team
+   AND t_artifact = :artifact;
 
 -- name: create-tag!
-INSERT INTO tag
-       (team, artifact, name, image)
+INSERT INTO tags
+       (t_team, t_artifact, t_name, t_image_id)
 VALUES (:team, :artifact, :name, :image);
 
 -- name: update-tag!
-UPDATE tag
-   SET image = :image
- WHERE team = :team
-   AND artifact = :artifact
-   AND name = :name;
+UPDATE tags
+   SET t_image_id = :image
+ WHERE t_team = :team
+   AND t_artifact = :artifact
+   AND t_name = :name;
 
 -- name: create-image!
-INSERT INTO image
-       (id, metadata, accepted, parent)
+INSERT INTO images
+       (i_id, i_metadata, i_accepted, i_parent_id)
 VALUES (:image, :metadata, FALSE, :parent);
 
 -- name: delete-unaccepted-image!
-DELETE FROM image
-WHERE id = :image
-      AND accepted = FALSE;
+DELETE FROM images
+WHERE i_id = :image
+      AND i_accepted = FALSE;
 
 -- name: accept-image!
-UPDATE image
-   SET accepted = TRUE
- WHERE id = :image;
+UPDATE images
+   SET i_accepted = TRUE
+ WHERE i_id = :image;
+
+-- name: create-scm-source-data!
+INSERT INTO scm_source_data
+       (ssd_image_id, ssd_url, ssd_revision, ssd_author, ssd_status)
+VALUES (:image, :url, :revision, :author, :status);
 
 -- name: get-image-metadata
-SELECT metadata
-  FROM image
- WHERE id = :image
-   AND accepted = TRUE;
+SELECT i_metadata AS metadata
+  FROM images
+ WHERE i_id = :image
+   AND i_accepted = TRUE;
 
 -- name: get-image-parent
-SELECT parent
-  FROM image
- WHERE id = :image
-   AND accepted = TRUE;
+SELECT i_parent_id AS parent
+  FROM images
+ WHERE i_id = :image
+   AND i_accepted = TRUE;

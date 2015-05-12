@@ -29,6 +29,14 @@
 (defn read-tags
   "Lists all tags of an artifact."
   [parameters _ db _]
-  (let [result (map :name (sql/list-tags parameters {:connection db}))]
+  (let [result (sql/list-tags parameters {:connection db})]
     (-> (ring/response result)
+        (fring/content-type-json))))
+
+(defn get-scm-source
+  "Get SCM source information"
+  [parameters _ db _]
+  (let [result (first (sql/get-scm-source parameters {:connection db}))]
+    (-> (ring/response result)
+        (ring/status (if result 200 404))
         (fring/content-type-json))))

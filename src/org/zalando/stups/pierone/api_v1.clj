@@ -4,8 +4,21 @@
             [ring.util.response :as ring]
             [clojure.data.json :as json]
             [org.zalando.stups.pierone.sql :as sql]
+            [clojure.java.io :as io]
+            [schema.core :as schema]
             [org.zalando.stups.pierone.storage :as s])
-  (:import (java.sql SQLException)))
+  (:import (java.sql SQLException)
+
+           (java.util UUID)
+           (org.apache.commons.compress.compressors.gzip GzipCompressorInputStream)
+           (org.apache.commons.compress.archivers.tar TarArchiveInputStream)
+           (java.io FileInputStream File)))
+
+(schema/defschema ScmSourceInformation
+  {:url schema/Str
+   :revision schema/Str
+   :author schema/Str
+   :status schema/Str})
 
 (defn- resp
   "Returns a response including various Docker headers set."
@@ -104,10 +117,34 @@
       (resp "image not found" request :status 404)
       (resp (-> result first :metadata json/read-str) request))))
 
+(defn extract-scm-source
+  [file]
+  (schema/validate ScmSourceInformation (json/read-str (slurp file) :key-fn keyword)))
+
+(defn get-scm-source-data
+  [tmp-file]
+  (try
+    (let [fis (FileInputStream. tmp-file)
+          tar-stream (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
+      (loop []
+        (when-let [entry (.getNextTarEntry tar-stream)]
+          (if (= (.getName entry) "scm-source.json")
+            (extract-scm-source tar-stream)
+            (recur)))))
+    (catch Exception e
+      (log/warn "Failed to read image layer: %s" (str e))
+      nil)))
+
 (defn put-image-binary
   "Stores an image's binary data. Second call in upload sequence."
   [{:keys [image data]} request db storage]
-  (s/write-data storage image data)
+  (let [^File tmp-file (io/file (:directory storage) (str image ".tmp-" (UUID/randomUUID)))]
+    (io/copy data tmp-file)
+    (s/write-data storage image tmp-file)
+    (when-let [scm-source (get-scm-source-data tmp-file)]
+      (log/info "Found scm-source.json in image %s: %s" image scm-source)
+      (sql/create-scm-source-data! (assoc scm-source :image image) {:connection db}))
+    (io/delete-file tmp-file true))
   (sql/accept-image! {:image image} {:connection db})
   (log/info "Stored new image %s." image)
   (resp "OK" request))
