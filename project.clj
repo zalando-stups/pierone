@@ -1,4 +1,4 @@
-(defproject org.zalando.stups/pierone "0.1-SNAPSHOT"
+(defproject org.zalando.stups/pierone "0.2-SNAPSHOT"
   :description "Pier One Docker Registry"
   :url "https://github.com/zalando-stups/pierone"
   :license {:name "Apache License"
