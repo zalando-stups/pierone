@@ -345,6 +345,8 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-teams
+      security:
+        - oauth2: [uid]
       responses:
         "200":
           description: Return list of team IDs
@@ -360,6 +362,8 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-artifacts
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -380,6 +384,8 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-tags
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -404,6 +410,8 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/get-scm-source
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -422,6 +430,14 @@ paths:
           description: Return scm-source.json
           schema:
             $ref: "#/definitions/ScmSourceInformation"
+
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: implicit
+    authorizationUrl: https://example.com/oauth2/dialog
+    scopes:
+      uid: Unique identifier of the user accessing the service.
 
 
 

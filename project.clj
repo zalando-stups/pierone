@@ -13,6 +13,8 @@
                  [org.postgresql/postgresql "9.3-1102-jdbc41"]
                  [org.apache.commons/commons-compress "1.9"]
 
+                 [org.clojure/data.codec "0.1.0"]
+
                  [amazonica "0.3.19"]]
 
   :main ^:skip-aot org.zalando.stups.pierone.core
