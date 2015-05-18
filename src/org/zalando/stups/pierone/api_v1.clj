@@ -7,6 +7,7 @@
             [clojure.java.io :as io]
             [io.sarnowski.swagger1st.util.api :as api]
             [io.sarnowski.swagger1st.util.security :as security]
+            [org.zalando.stups.friboo.user :as u]
             [schema.core :as schema]
             [clojure.data.codec.base64 :as b64]
             [org.zalando.stups.friboo.config :refer [require-config]]
@@ -33,7 +34,6 @@
                           (if binary?
                             (ring/content-type response "application/octet-stream")
                             (ring/content-type response "application/json")))]
-    (log/info "token info %s" (:tokeninfo request))
     (-> (ring/response body)
         (content-type-fn)
         (ring/status status)
@@ -53,7 +53,8 @@
 
 (defn put-repo
   "Dummy call."
-  [_ request _ _]
+  [{:keys [team]} request _ _]
+  (u/require-internal-team team request)
   (resp "OK" request))
 
 (defn get-tags
@@ -72,6 +73,7 @@
 (defn put-tag
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable."
   [parameters request db _]
+  (u/require-internal-team (:team parameters) request)
   (try
     (sql/create-tag! (assoc parameters :user (get-in request [:tokeninfo "uid"])) {:connection db})
     (log/info "Stored new tag %s." parameters)
@@ -185,3 +187,12 @@
     (if (empty? ancestry)
       (resp "image not found" request :status 404)
       (resp ancestry request))))
+
+(defn post-users
+  "Special handler for docker client"
+  [_ request _ _]
+  (resp "Not supported, please use GET /v1/users" request :status 401))
+
+(defn login
+  [_ request _ _]
+  (resp "Login successful" request))
