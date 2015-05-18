@@ -58,6 +58,10 @@ Pier One supports a number of environment variables to use the Amazon S3 backend
 
     $ docker run -it -p 8080:8080 -e STORAGE_S3_BUCKET=my-bucket stups/pierone
 
+``HTTP_TEAM_SERVICE_URL``
+    URL to get team membership information by user's UID.
+``HTTP_TOKENINFO_URL``
+    OAuth2 token info URL (e.g. https://example.org/oauth2/tokeninfo)
 ``STORAGE_S3_BUCKET``
     Only for S3 backend: the Amazon S3 bucket name.
 

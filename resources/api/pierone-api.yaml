@@ -12,6 +12,7 @@ consumes:
 produces:
   - application/json
 
+
 definitions:
   ScmSourceInformation:
     type: object
@@ -81,6 +82,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/search
+      security:
+        - oauth2: [uid]
       parameters:
         - name: q
           in: query
@@ -101,6 +104,28 @@ paths:
                     name:
                       type: string
 
+  ### Users
+
+  /v1/users:
+    post:
+      summary: Dummy endpoint to redirect Docker client to GET
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/post-users
+      responses:
+        "401":
+          description: Please use GET /v1/users
+    get:
+      summary: Validate login data (will be called by Docker client with basic auth)
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/login
+      security:
+        - oauth2: [uid]
+      responses:
+        "200":
+          description: Login successful
+
   ### Tags
 
   /v1/repositories/{team}/{artifact}/tags:
@@ -110,6 +135,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-tags
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -132,6 +159,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/put-tag
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -161,6 +190,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/put-repo
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -189,6 +220,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/put-images
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -207,6 +240,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-images
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -227,6 +262,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/put-image-json
+      security:
+        - oauth2: [uid]
       parameters:
         - name: image
           in: path
@@ -246,6 +283,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-image-json
+      security:
+        - oauth2: [uid]
       parameters:
         - name: image
           in: path
@@ -264,6 +303,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/put-image-binary
+      security:
+        - oauth2: [uid]
       consumes:
         - application/octet-stream
       parameters:
@@ -285,6 +326,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-image-binary
+      security:
+        - oauth2: [uid]
       produces:
         - application/octet-stream
       parameters:
@@ -305,6 +348,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/put-image-checksum
+      security:
+        - oauth2: [uid]
       parameters:
         - name: image
           in: path
@@ -321,6 +366,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-image-ancestry
+      security:
+        - oauth2: [uid]
       parameters:
         - name: image
           in: path
@@ -345,6 +392,8 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-teams
+      security:
+        - oauth2: [uid]
       responses:
         "200":
           description: Return list of team IDs
@@ -360,6 +409,8 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-artifacts
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -380,6 +431,8 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-tags
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -404,6 +457,8 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/get-scm-source
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -423,6 +478,10 @@ paths:
           schema:
             $ref: "#/definitions/ScmSourceInformation"
 
-
-
-
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: implicit
+    authorizationUrl: https://example.com/oauth2/dialog
+    scopes:
+      uid: Unique identifier of the user accessing the service.

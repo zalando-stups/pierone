@@ -5,7 +5,12 @@
             [clojure.data.json :as json]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
+            [io.sarnowski.swagger1st.util.api :as api]
+            [io.sarnowski.swagger1st.util.security :as security]
+            [org.zalando.stups.friboo.user :as u]
             [schema.core :as schema]
+            [clojure.data.codec.base64 :as b64]
+            [org.zalando.stups.friboo.config :refer [require-config]]
             [org.zalando.stups.pierone.storage :as s])
   (:import (java.sql SQLException)
 
@@ -15,10 +20,10 @@
            (java.io FileInputStream File)))
 
 (schema/defschema ScmSourceInformation
-  {:url schema/Str
+  {:url      schema/Str
    :revision schema/Str
-   :author schema/Str
-   :status schema/Str})
+   :author   schema/Str
+   :status   schema/Str})
 
 (defn- resp
   "Returns a response including various Docker headers set."
@@ -33,7 +38,7 @@
         (content-type-fn)
         (ring/status status)
         (ring/header "X-Docker-Registry-Version" "0.6.3")
-        (ring/header "X-Docker-Token" "FakeToken")
+        (ring/header "X-Docker-Token" (get (:tokeninfo request) "access_token"))
         (ring/header "X-Docker-Endpoints" (get-in request [:headers "host"])))))
 
 (defn ping
@@ -48,7 +53,8 @@
 
 (defn put-repo
   "Dummy call."
-  [_ request _ _]
+  [{:keys [team]} request _ _]
+  (u/require-internal-team team request)
   (resp "OK" request))
 
 (defn get-tags
@@ -67,8 +73,9 @@
 (defn put-tag
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable."
   [parameters request db _]
+  (u/require-internal-team (:team parameters) request)
   (try
-    (sql/create-tag! parameters {:connection db})
+    (sql/create-tag! (assoc parameters :user (get-in request [:tokeninfo "uid"])) {:connection db})
     (log/info "Stored new tag %s." parameters)
     (resp "OK" request)
 
@@ -82,9 +89,10 @@
           (log/warn "Prevented update of tag: %s" (str e))
           (resp "tag already exists" request :status 409))))))
 
-(defn put-images [_ request _ _]
+(defn put-images
   "Dummy call. this is the final call from Docker client when pushing an image
    Docker client expects HTTP status code 204 (No Content) instead of 200 here!"
+  [_ request _ _]
   (resp "" request :status 204))
 
 (defn get-images
@@ -100,7 +108,8 @@
     (sql/create-image!
       {:image    image
        :metadata (json/write-str metadata)
-       :parent   (:parent metadata)}
+       :parent   (:parent metadata)
+       :user     (get-in request [:tokeninfo "uid"])}
       {:connection db})
     (log/debug "Stored new image metadata %s." image)
     (resp "OK" request)
@@ -178,3 +187,12 @@
     (if (empty? ancestry)
       (resp "image not found" request :status 404)
       (resp ancestry request))))
+
+(defn post-users
+  "Special handler for docker client"
+  [_ request _ _]
+  (resp "Not supported, please use GET /v1/users" request :status 401))
+
+(defn login
+  [_ request _ _]
+  (resp "Login successful" request))
