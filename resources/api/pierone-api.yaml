@@ -12,6 +12,9 @@ consumes:
 produces:
   - application/json
 
+security:
+  - oauth2: [uid]
+
 definitions:
   ScmSourceInformation:
     type: object
@@ -52,6 +55,7 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/ping
+      security: []
       responses:
         "404":
           description: v2 is not available
@@ -65,6 +69,7 @@ paths:
       tags:
           - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/ping
+      security: []
       responses:
         "200":
           description: Docker Registry v1 is available
@@ -189,6 +194,7 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/put-images
+
       parameters:
         - name: team
           in: path
@@ -345,8 +351,6 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-teams
-      security:
-        - oauth2: [uid]
       responses:
         "200":
           description: Return list of team IDs
@@ -362,8 +366,6 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-artifacts
-      security:
-        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -384,8 +386,6 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-tags
-      security:
-        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -410,8 +410,6 @@ paths:
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/get-scm-source
-      security:
-        - oauth2: [uid]
       parameters:
         - name: team
           in: path

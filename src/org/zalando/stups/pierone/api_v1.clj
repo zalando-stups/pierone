@@ -5,8 +5,11 @@
             [clojure.data.json :as json]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
+            [io.sarnowski.swagger1st.util.api :as api]
+            [io.sarnowski.swagger1st.util.security :as security]
             [schema.core :as schema]
             [clojure.data.codec.base64 :as b64]
+            [org.zalando.stups.friboo.config :refer [require-config]]
             [org.zalando.stups.pierone.storage :as s])
   (:import (java.sql SQLException)
 
@@ -30,10 +33,12 @@
                           (if binary?
                             (ring/content-type response "application/octet-stream")
                             (ring/content-type response "application/json")))]
+    (log/info "token info %s" (:tokeninfo request))
     (-> (ring/response body)
         (content-type-fn)
         (ring/status status)
         (ring/header "X-Docker-Registry-Version" "0.6.3")
+        (ring/header "X-Docker-Token" (get (:tokeninfo request) "access_token"))
         (ring/header "X-Docker-Endpoints" (get-in request [:headers "host"])))))
 
 (defn ping
@@ -46,29 +51,10 @@
   [_ request _ _]
   (resp {:results []} request))
 
-(defn parse-authorization
-  "Parse HTTP Basic Authorization header"
-  [authorization]
-  (-> authorization
-      (clojure.string/replace-first "Basic " "")
-      .getBytes
-      b64/decode
-      String.
-      (clojure.string/split #":" 2)
-      (#(zipmap [:username :password] %))))
-
-(defn extract-auth
-  "Extract authorization from basic auth header"
-  [req]
-  (if-let [auth-value (get-in req [:headers "authorization"])]
-    (parse-authorization auth-value)))
-
 (defn put-repo
   "Dummy call."
   [_ request _ _]
-  (let [auth (extract-auth request)]
-    (-> (resp "OK" request)
-        (ring/header "X-Docker-Token" (:password auth)))))
+  (resp "OK" request))
 
 (defn get-tags
   "Get a map of all tags for an artifact with its images."
@@ -101,17 +87,16 @@
           (log/warn "Prevented update of tag: %s" (str e))
           (resp "tag already exists" request :status 409))))))
 
-(defn put-images [_ request _ _]
+(defn put-images
   "Dummy call. this is the final call from Docker client when pushing an image
    Docker client expects HTTP status code 204 (No Content) instead of 200 here!"
+  [_ request _ _]
   (resp "" request :status 204))
 
 (defn get-images
   "Dummy call."
   [_ request _ _]
-  (let [auth (extract-auth request)]
-    (-> (resp [] request)
-        (ring/header "X-Docker-Token" (:password auth)))))
+  (resp [] request))
 
 (defn put-image-json
   "Stores an image's JSON metadata. First call in upload sequence."
