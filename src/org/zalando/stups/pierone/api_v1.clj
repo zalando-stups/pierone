@@ -48,8 +48,15 @@
 
 (defn search
   "Dummy call. Searches for repositories."
-  [_ request _ _]
-  (resp {:results []} request))
+  [{:keys [q] :as parameters} request db _]
+  (let [repos (sql/search-repos parameters {:connection db})
+        num-results (count repos)]
+    (resp {:results repos
+           :query q
+           :page 1
+           :page_size num-results
+           :num_pages 1
+           :num_results num-results} request)))
 
 (defn put-repo
   "Dummy call."

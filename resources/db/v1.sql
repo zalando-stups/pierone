@@ -48,3 +48,11 @@ SELECT i_parent_id AS parent
   FROM images
  WHERE i_id = :image
    AND i_accepted = TRUE;
+
+-- name: search-repos
+  SELECT t_team || '/' || t_artifact AS name
+    FROM tags
+   WHERE t_team = :q
+      OR t_artifact = :q
+GROUP BY name
+ORDER BY name

@@ -96,6 +96,10 @@ paths:
           schema:
             type: object
             properties:
+              num_results:
+                type: int
+              query:
+                type: string
               results:
                 type: array
                 items:
