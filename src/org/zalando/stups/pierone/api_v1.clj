@@ -73,7 +73,7 @@
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable."
   [parameters request db _]
   (try
-    (sql/create-tag! parameters {:connection db})
+    (sql/create-tag! (assoc parameters :user (get-in request [:tokeninfo "uid"])) {:connection db})
     (log/info "Stored new tag %s." parameters)
     (resp "OK" request)
 
@@ -106,7 +106,8 @@
     (sql/create-image!
       {:image    image
        :metadata (json/write-str metadata)
-       :parent   (:parent metadata)}
+       :parent   (:parent metadata)
+       :user     (get-in request [:tokeninfo "uid"])}
       {:connection db})
     (log/debug "Stored new image metadata %s." image)
     (resp "OK" request)

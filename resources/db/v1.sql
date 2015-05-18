@@ -7,8 +7,8 @@ SELECT t_name AS name,
 
 -- name: create-tag!
 INSERT INTO tags
-       (t_team, t_artifact, t_name, t_image_id)
-VALUES (:team, :artifact, :name, :image);
+       (t_team, t_artifact, t_name, t_image_id, t_created_by)
+VALUES (:team, :artifact, :name, :image, :user);
 
 -- name: update-tag!
 UPDATE tags
@@ -19,8 +19,8 @@ UPDATE tags
 
 -- name: create-image!
 INSERT INTO images
-       (i_id, i_metadata, i_accepted, i_parent_id)
-VALUES (:image, :metadata, FALSE, :parent);
+       (i_id, i_metadata, i_accepted, i_parent_id, i_created_by)
+VALUES (:image, :metadata, FALSE, :parent, :user);
 
 -- name: delete-unaccepted-image!
 DELETE FROM images
