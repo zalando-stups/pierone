@@ -41,6 +41,14 @@
         (ring/header "X-Docker-Token" (get (:tokeninfo request) "access_token"))
         (ring/header "X-Docker-Endpoints" (get-in request [:headers "host"])))))
 
+(defn require-write-access
+  "Require write access to team repository"
+  [team request]
+  ; either user has write access to all (service user)
+  ; or user belongs to a team (employee user)
+  (when-not (get-in request [:tokeninfo "application.write_all"])
+    (u/require-internal-team team request)))
+
 (defn ping
   "Client checks for compatibility."
   [_ request _ _]
@@ -51,17 +59,17 @@
   [{:keys [q] :as parameters} request db _]
   (let [repos (sql/search-repos parameters {:connection db})
         num-results (count repos)]
-    (resp {:results repos
-           :query q
-           :page 1
-           :page_size num-results
-           :num_pages 1
+    (resp {:results     repos
+           :query       q
+           :page        1
+           :page_size   num-results
+           :num_pages   1
            :num_results num-results} request)))
 
 (defn put-repo
   "Dummy call."
   [{:keys [team]} request _ _]
-  (u/require-internal-team team request)
+  (require-write-access team request)
   (resp "OK" request))
 
 (defn get-tags
@@ -80,7 +88,7 @@
 (defn put-tag
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable."
   [parameters request db _]
-  (u/require-internal-team (:team parameters) request)
+  (require-write-access (:team parameters) request)
   (try
     (sql/create-tag! (assoc parameters :user (get-in request [:tokeninfo "uid"])) {:connection db})
     (log/info "Stored new tag %s." parameters)
