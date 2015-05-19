@@ -89,20 +89,21 @@
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable."
   [parameters request db _]
   (require-write-access (:team parameters) request)
-  (try
-    (sql/create-tag! (assoc parameters :user (get-in request [:tokeninfo "uid"])) {:connection db})
-    (log/info "Stored new tag %s." parameters)
-    (resp "OK" request)
+  (let [params-with-user (assoc parameters :user (get-in request [:tokeninfo "uid"]))]
+    (try
+      (sql/create-tag! params-with-user {:connection db})
+      (log/info "Stored new tag %s." params-with-user)
+      (resp "OK" request)
 
-    (catch SQLException e
-      (if (.endsWith (:name parameters) "-SNAPSHOT")
-        (do
-          (sql/update-tag! parameters {:connection db})
-          (log/info "Updated snapshot tag %s." parameters)
-          (resp "OK" request))
-        (do
-          (log/warn "Prevented update of tag: %s" (str e))
-          (resp "tag already exists" request :status 409))))))
+      (catch SQLException e
+        (if (.endsWith (:name params-with-user) "-SNAPSHOT")
+          (do
+            (sql/update-tag! params-with-user {:connection db})
+            (log/info "Updated snapshot tag %s." params-with-user)
+            (resp "OK" request))
+          (do
+            (log/warn "Prevented update of tag: %s" (str e))
+            (resp "tag already exists" request :status 409)))))))
 
 (defn put-images
   "Dummy call. this is the final call from Docker client when pushing an image

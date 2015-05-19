@@ -12,7 +12,11 @@ VALUES (:team, :artifact, :name, :image, :user);
 
 -- name: update-tag!
 UPDATE tags
-   SET t_image_id = :image
+   SET t_image_id = :image,
+       -- updating is like overwriting (delete+create)
+       -- i.e. update created timestamp and user
+       t_created_by = :user,
+       t_created = now()
  WHERE t_team = :team
    AND t_artifact = :artifact
    AND t_name = :name;
