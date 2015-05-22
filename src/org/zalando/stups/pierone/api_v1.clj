@@ -10,6 +10,7 @@
             [org.zalando.stups.friboo.user :as u]
             [schema.core :as schema]
             [clojure.data.codec.base64 :as b64]
+            [com.netflix.hystrix.core :refer [defcommand]]
             [org.zalando.stups.friboo.config :refer [require-config]]
             [org.zalando.stups.pierone.storage :as s])
   (:import (java.sql SQLException)
@@ -38,7 +39,7 @@
         (content-type-fn)
         (ring/status status)
         (ring/header "X-Docker-Registry-Version" "0.6.3")
-        (ring/header "X-Docker-Token" (get (:tokeninfo request) "access_token"))
+        (ring/header "X-Docker-Token" (get (:tokeninfo request) "access_token" "AnonFakeToken"))
         (ring/header "X-Docker-Endpoints" (get-in request [:headers "host"])))))
 
 (defn require-write-access
@@ -160,12 +161,20 @@
       (log/warn "Failed to read image layer: %s" (str e))
       nil)))
 
+(defcommand store-image
+            [storage image tmp-file]
+            (s/write-data storage image tmp-file))
+
+(defcommand load-image
+            [storage image]
+            (s/read-data storage image))
+
 (defn put-image-binary
   "Stores an image's binary data. Second call in upload sequence."
   [{:keys [image data]} request db storage]
   (let [^File tmp-file (io/file (:directory storage) (str image ".tmp-" (UUID/randomUUID)))]
     (io/copy data tmp-file)
-    (s/write-data storage image tmp-file)
+    (store-image storage image tmp-file)
     (when-let [scm-source (get-scm-source-data tmp-file)]
       (log/info "Found scm-source.json in image %s: %s" image scm-source)
       (sql/create-scm-source-data! (assoc scm-source :image image) {:connection db}))
@@ -177,7 +186,7 @@
 (defn get-image-binary
   "Reads the binary data of an image."
   [{:keys [image]} request _ storage]
-  (if-let [data (s/read-data storage image)]
+  (if-let [data (load-image storage image)]
     (resp data request :binary? true)
     (resp "image not found" request :status 404)))
 
