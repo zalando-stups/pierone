@@ -1,6 +1,6 @@
 (ns org.zalando.stups.pierone.sql
   (:require [yesql.core :refer [defqueries]]
-            [org.zalando.stups.friboo.system.db :refer [def-db-component]]))
+            [org.zalando.stups.friboo.system.db :refer [def-db-component generate-hystrix-commands]]))
 
 (def-db-component DB :auto-migration? true)
 
@@ -14,3 +14,4 @@
 
 (defqueries "db/pierone.sql")
 (defqueries "db/v1.sql")
+(generate-hystrix-commands)

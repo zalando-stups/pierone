@@ -58,7 +58,7 @@
 (defn search
   "Dummy call. Searches for repositories."
   [{:keys [q] :as parameters} request db _]
-  (let [repos (sql/search-repos parameters {:connection db})
+  (let [repos (sql/cmd-search-repos parameters {:connection db})
         num-results (count repos)]
     (resp {:results     repos
            :query       q
@@ -76,7 +76,7 @@
 (defn get-tags
   "Get a map of all tags for an artifact with its images."
   [parameters request db _]
-  (let [tags (sql/read-tags parameters {:connection db})]
+  (let [tags (sql/cmd-read-tags parameters {:connection db})]
     (if (empty? tags)
       (resp {} request :status 404)
       (let [tags (reduce
@@ -96,10 +96,11 @@
       (log/info "Stored new tag %s." params-with-user)
       (resp "OK" request)
 
+      ; TODO check for hystrix exception and replace sql above with cmd- version
       (catch SQLException e
         (if (.endsWith (:name params-with-user) "-SNAPSHOT")
           (do
-            (sql/update-tag! params-with-user {:connection db})
+            (sql/cmd-update-tag! params-with-user {:connection db})
             (log/info "Updated snapshot tag %s." params-with-user)
             (resp "OK" request))
           (do
@@ -131,6 +132,7 @@
     (log/debug "Stored new image metadata %s." image)
     (resp "OK" request)
 
+    ; TODO check for hystrix command and adjust sql above with cmd-
     (catch SQLException e
       (log/warn "Prevented update of image: %s", (str e))
       (resp "image already exists" request :status 409))))
@@ -138,7 +140,7 @@
 (defn get-image-json
   "Returns an image's metadata."
   [parameters request db _]
-  (let [result (sql/get-image-metadata parameters {:connection db})]
+  (let [result (sql/cmd-get-image-metadata parameters {:connection db})]
     (if (empty? result)
       (resp "image not found" request :status 404)
       (resp (-> result first :metadata json/read-str) request))))
@@ -177,9 +179,9 @@
     (store-image storage image tmp-file)
     (when-let [scm-source (get-scm-source-data tmp-file)]
       (log/info "Found scm-source.json in image %s: %s" image scm-source)
-      (sql/create-scm-source-data! (assoc scm-source :image image) {:connection db}))
+      (sql/cmd-create-scm-source-data! (assoc scm-source :image image) {:connection db}))
     (io/delete-file tmp-file true))
-  (sql/accept-image! {:image image} {:connection db})
+  (sql/cmd-accept-image! {:image image} {:connection db})
   (log/info "Stored new image %s." image)
   (resp "OK" request))
 
@@ -200,7 +202,7 @@
   [{:keys [image]} request db _]
   ; TODO solve recursion in postgresql (http://www.postgresql.org/docs/9.4/static/queries-with.html)
   (let [f (fn [images image]
-            (let [result (sql/get-image-parent {:image image} {:connection db})
+            (let [result (sql/cmd-get-image-parent {:image image} {:connection db})
                   exists? (first result)
                   parent (:parent exists?)]
               (if exists?
