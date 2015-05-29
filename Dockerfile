@@ -12,4 +12,4 @@ ENV HTTP_PORT 8080
 COPY target/pierone.jar /
 COPY target/scm-source.json /
 
-CMD java $(java-dynamic-memory-opts) -jar /pierone.jar
+CMD java $(java-dynamic-memory-opts) -Dhystrix.command.default.execution.timeout.enabled=false -jar /pierone.jar
