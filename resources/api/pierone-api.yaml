@@ -82,6 +82,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/search
+      security:
+        - oauth2: [uid]
       parameters:
         - name: q
           in: query
@@ -122,6 +124,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/login
+      security:
+        - oauth2: [uid]
       responses:
         "200":
           description: Login successful
@@ -135,6 +139,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-tags
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -157,6 +163,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/put-tag
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -236,6 +244,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-images
+      security:
+        - oauth2: [uid]
       parameters:
         - name: team
           in: path
@@ -277,6 +287,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-image-json
+      security:
+        - oauth2: [uid]
       parameters:
         - name: image
           in: path
@@ -318,6 +330,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-image-binary
+      security:
+        - oauth2: [uid]
       produces:
         - application/octet-stream
       parameters:
@@ -356,6 +370,8 @@ paths:
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-image-ancestry
+      security:
+        - oauth2: [uid]
       parameters:
         - name: image
           in: path
