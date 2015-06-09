@@ -6,13 +6,13 @@
   :scm {:url "git@github.com:zalando-stups/pierone"}
   :min-lein-version "2.0.0"
 
-  :dependencies [[org.zalando.stups/friboo "0.20.0"]
-                 [yesql "0.5.0-rc2"]
+  :dependencies [[org.zalando.stups/friboo "0.21.0"]
+                 [yesql "0.5.0-rc3"]
 
                  [org.apache.commons/commons-compress "1.9"]
                  [org.clojure/data.codec "0.1.0"]
 
-                 [amazonica "0.3.19"]]
+                 [amazonica "0.3.23"]]
 
   :main ^:skip-aot org.zalando.stups.pierone.core
   :uberjar-name "pierone.jar"
@@ -41,11 +41,11 @@
   :profiles {:uberjar {:aot :all}
 
              :test    {:dependencies [[clj-http-lite "0.2.1"]
-                                      [org.clojure/java.jdbc "0.3.6"]]}
+                                      [org.clojure/java.jdbc "0.3.7"]]}
 
              :dev     {:repl-options {:init-ns user}
                        :source-paths ["dev"]
                        :dependencies [[org.clojure/tools.namespace "0.2.10"]
                                       [org.clojure/java.classpath "0.2.2"]
                                       [clj-http-lite "0.2.1"]
-                                      [org.clojure/java.jdbc "0.3.6"]]}})
+                                      [org.clojure/java.jdbc "0.3.7"]]}})
