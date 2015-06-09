@@ -1,0 +1,65 @@
+# Example Senza definition for Pier One Docker registry
+SenzaInfo:
+  StackName: pierone
+  # optional SNS topic to send notification mails to
+  OperatorTopicId: stups-ops
+  Parameters:
+    - ImageVersion:
+        Description: "Docker image version of PierOne."
+
+SenzaComponents:
+
+  - Configuration:
+      Type: Senza::StupsAutoConfiguration
+
+  - AppServer:
+      Type: Senza::TaupageAutoScalingGroup
+      InstanceType: t2.medium
+      SecurityGroups:
+        - app-pierone
+        # optional additional security group for Turbine to connect to port 7979
+        - hystrix-streams
+      IamRoles: [app-pierone]
+      ElasticLoadBalancer: AppLoadBalancer
+      TaupageConfig:
+        runtime: Docker
+        # NOTE: we use the public Docker hub as Pier One
+        # cannot bootstrap itself
+        source: stups/pierone:{{Arguments.ImageVersion}}
+        # mint bucket for OAuth credential distribution
+        mint_bucket: exampleorg-stups-mint-123456789123-eu-west-1
+        ports:
+          8080: 8080
+          # port 7979 is used by Hystrix
+          7979: 7979
+        environment:
+          # OAuth2 tokeninfo endpoint
+          HTTP_TOKENINFO_URL: "https://auth.example.org/oauth2/tokeninfo"
+          # Team Service endpoint to check user team membership
+          HTTP_TEAM_SERVICE_URL: "https://teams.example.org"
+          # optional S3 bucket name to log change operations to
+          HTTP_AUDIT_LOGS_BUCKET: "exampleorg-stups-audit-logs-eu-west-1"
+          PGSSLMODE: verify-full
+          DB_SUBNAME: "//pierone.abc123.eu-west-1.rds.amazonaws.com:5432/kio?ssl=true"
+          DB_USER: pierone
+          DB_PASSWORD: pieronepassword
+          # required: S3 bucket to store Docker images in
+          STORAGE_S3_BUCKET: exampleorg-stups-pierone-eu-west-1
+        # optional Scalyr account key to stream application logs to
+        scalyr_account_key: abc123xyz
+        # optional etcd DNS domain for Hystrix/Turbine
+        etcd_discovery_domain: main.stups.example.org
+        # optional special entry for Turbine discovery
+        hystrix: ":7979/hystrix.stream"
+      AutoScaling:
+        Minimum: 2
+        Maximum: 10
+        MetricType: CPU
+        ScaleUpThreshold: 70
+        ScaleDownThreshold: 40
+
+  - AppLoadBalancer:
+      Type: Senza::WeightedDnsElasticLoadBalancer
+      HTTPPort: 8080
+      HealthCheckPath: /.well-known/health
+      SecurityGroups: [app-pierone-lb]
