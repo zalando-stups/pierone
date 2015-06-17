@@ -53,15 +53,26 @@ Running
 =======
 
 Pier One supports a number of environment variables to use the Amazon S3 backend.
+You will need a PostgreSQL database (database schemas are created automatically on first start).
 
 .. code-block:: bash
 
-    $ docker run -it -p 8080:8080 -e STORAGE_S3_BUCKET=my-bucket stups/pierone
+    # run Pier One locally with file backend and connect to localhost PostgreSQL
+    # NOTE: we simply use the "host" networking hack here to connect to the localhost DB
+    $ docker run -it -p 8080:8080 --net=host stups/pierone
 
+``DB_SUBNAME``
+    Postgres connection string, e.g "//pierone.foo.eu-west-1.rds.amazonaws.com:5432/pierone?ssl=true". Default is "//localhost:5432/pierone"
+``DB_PASSWORD``
+    Postgres password. Default is "postgres".
+``DB_USER``
+    Postgres user name. Default is "postgres".
 ``HTTP_TEAM_SERVICE_URL``
     URL to get team membership information by user's UID.
 ``HTTP_TOKENINFO_URL``
     OAuth2 token info URL (e.g. https://example.org/oauth2/tokeninfo)
+``PGSSLMODE``
+    Set to "verify-full" in order to fully verify the Postgres SSL cert.
 ``STORAGE_S3_BUCKET``
     Only for S3 backend: the Amazon S3 bucket name.
 
