@@ -76,7 +76,10 @@ You will need a PostgreSQL database (database schemas are created automatically 
 ``STORAGE_S3_BUCKET``
     Only for S3 backend: the Amazon S3 bucket name.
 
+See the `STUPS Installation Guide section on Pier One`_ for details about deploying Pier One into your AWS account.
+
 .. _Leiningen: http://leiningen.org/
+.. _STUPS Installation Guide section on Pier One: http://docs.stups.io/en/latest/installation/service-deployments.html#pier-one
 
 License
 =======
