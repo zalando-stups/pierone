@@ -99,7 +99,7 @@
       (let [body (expect "pull metadata"
               200 (client/get (url "/images/" (:id image) "/json")
                               {:throw-exceptions false}))]
-        (is (= body (:metadata image))))
+        (is (= (json/read-str body) (json/read-str (:metadata image)))))
       (let [body (expect "pull layer"
                          200 (client/get (url "/images/" (:id image) "/layer")
                                          {:throw-exceptions false}))]
