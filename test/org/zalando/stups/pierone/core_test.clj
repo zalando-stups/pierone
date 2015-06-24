@@ -11,7 +11,7 @@
 
 (def test-images-hierarchy
   [{:id       "img1"
-    :metadata "{\"id\": \"img1\", \"parent\": \"img2\"}"
+    :metadata "{\"id\": \"img1\", \"parent\": \"img2\", \"key/with/slash\": \"test\"}"
     :data     (io/input-stream (.getBytes "img1data"))}
    {:id       "img2"
     :metadata "{\"id\": \"img2\", \"parent\": \"img3\"}"
@@ -96,10 +96,11 @@
                                :content-type     :json})))
     ; pull images -> all images available
     (doseq [image test-images-hierarchy]
-      (expect "pull metadata"
-              200 (client/get (url "/images/" (:id image) "/json")
-                              {:throw-exceptions false}))
       (let [body (expect "pull metadata"
+              200 (client/get (url "/images/" (:id image) "/json")
+                              {:throw-exceptions false}))]
+        (is (= body (:metadata image))))
+      (let [body (expect "pull layer"
                          200 (client/get (url "/images/" (:id image) "/layer")
                                          {:throw-exceptions false}))]
         (= body (:data image))))
