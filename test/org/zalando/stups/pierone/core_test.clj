@@ -107,13 +107,13 @@
 
     ; check ancestry -> all images in ancestry
     (let [root (first test-images-hierarchy)
-          ancestry (expect "pull metadata"
+          ancestry (expect "get ancestry"
                            200 (client/get (url "/images/" (:id root) "/ancestry")
                                            {:throw-exceptions false}))
-          ancestry (into #{} ancestry)]
-      (= (count ancestry) (count test-images-hierarchy))
-      (doseq [image test-image-single]
-        (= true (ancestry (:id image)))))
+          ancestry (into #{} (json/read-str ancestry))]
+      (is (= (count ancestry) (count test-images-hierarchy)))
+      (doseq [image test-images-hierarchy]
+        (is (contains? ancestry (:id image)))))
 
     ; push image metadata without binary data does not block a new upload
     (expect "upload metadata"
@@ -152,7 +152,7 @@
       (let [result (json/read-str (expect "list tags"
                            200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
                                            {:throw-exceptions false})))]
-        (= (count result) 1 "list tags: count")
+        (is (= (count result) 1))
         (println result)
         (let [[tag image] (first result)]
           (= tag (:name test-tag) "list tags: tag")

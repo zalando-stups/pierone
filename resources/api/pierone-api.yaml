@@ -277,6 +277,7 @@ paths:
           in: body
           schema:
             description: image metadata
+            x-swagger1st-keywordize: false
       responses:
         "200":
           description: Image JSON was stored successfully

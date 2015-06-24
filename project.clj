@@ -8,6 +8,7 @@
 
   :dependencies [[org.zalando.stups/friboo "0.23.0"]
                  [yesql "0.5.0-rc3"]
+                 [io.sarnowski/swagger1st "0.11.0-SNAPSHOT"]
 
                  [org.apache.commons/commons-compress "1.9"]
                  [org.clojure/data.codec "0.1.0"]

@@ -126,7 +126,7 @@
     (sql/create-image!
       {:image    image
        :metadata (json/write-str metadata)
-       :parent   (:parent metadata)
+       :parent   (get metadata "parent")
        :user     (get-in request [:tokeninfo "uid"])}
       {:connection db})
     (log/debug "Stored new image metadata %s." image)
