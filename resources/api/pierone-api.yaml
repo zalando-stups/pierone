@@ -42,7 +42,7 @@ definitions:
         type: string
         example: hjacobs
 
-XXXpaths:
+paths:
 
   ## Docker Registry API v2
 
