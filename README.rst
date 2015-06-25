@@ -67,6 +67,8 @@ You will need a PostgreSQL database (database schemas are created automatically 
     Postgres password. Default is "postgres".
 ``DB_USER``
     Postgres user name. Default is "postgres".
+``HTTP_ALLOW_PUBLIC_READ``
+    Allow Docker image downloads without authentication (e.g. to run Pier One as a registry for open source projects). Default is "false".
 ``HTTP_TEAM_SERVICE_URL``
     URL to get team membership information by user's UID.
 ``HTTP_TOKENINFO_URL``

@@ -9,7 +9,13 @@ ENV STORAGE_DIRECTORY /data
 EXPOSE 8080
 ENV HTTP_PORT 8080
 
+COPY run.sh /
+
 COPY target/pierone.jar /
 COPY target/scm-source.json /
 
-CMD java $(java-dynamic-memory-opts) -Dhystrix.command.default.execution.timeout.enabled=false -jar /pierone.jar
+COPY resources/ /resources/
+
+RUN cat /resources/api/pierone-api.yaml | grep -v 'remove for HTTP_ALLOW_PUBLIC_READ' > /resources/api/pierone-api-allow-public-read.yaml
+
+CMD /run.sh
