@@ -2,6 +2,9 @@ FROM zalando/openjdk:8u40-b09-4
 
 MAINTAINER Zalando SE
 
+# this is a hack to put the filtered YAML file into pierone.jar
+RUN apt-get update && apt-get install -y -q zip
+
 RUN mkdir /data
 RUN chmod 0777 /data
 ENV STORAGE_DIRECTORY /data
@@ -17,5 +20,6 @@ COPY target/scm-source.json /
 COPY resources/ /resources/
 
 RUN cat /resources/api/pierone-api.yaml | grep -v 'remove for HTTP_ALLOW_PUBLIC_READ' > /resources/api/pierone-api-allow-public-read.yaml
+RUN cd /resources && zip /pierone.jar api/pierone-api-allow-public-read.yaml
 
 CMD /run.sh

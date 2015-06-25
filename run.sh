@@ -5,4 +5,4 @@ if [ "$HTTP_ALLOW_PUBLIC_READ" = "true" ]; then
     extraopt="-Dhttp.api.definition.suffix=-allow-public-read"
 fi
 
-java -cp /resources $(java-dynamic-memory-opts) -Dhystrix.command.default.execution.timeout.enabled=false $extraopt -jar /pierone.jar
+java $(java-dynamic-memory-opts) -Dhystrix.command.default.execution.timeout.enabled=false $extraopt -jar /pierone.jar
