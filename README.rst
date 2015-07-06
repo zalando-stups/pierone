@@ -47,7 +47,7 @@ Building
 
 .. code-block:: bash
 
-    $ lein do uberjar, docker build
+    $ lein do uberjar, scm-source, docker build
 
 Running
 =======
