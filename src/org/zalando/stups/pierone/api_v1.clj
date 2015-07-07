@@ -152,8 +152,8 @@
 (defn get-scm-source-data
   [tmp-file]
   (try
-    (let [fis (FileInputStream. tmp-file)
-          tar-stream (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
+    (with-open [fis (FileInputStream. tmp-file)
+                tar-stream (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
       (loop []
         (when-let [entry (.getNextTarEntry tar-stream)]
           (if (= (.getName entry) "scm-source.json")
