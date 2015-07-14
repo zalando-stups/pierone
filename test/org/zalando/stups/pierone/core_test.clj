@@ -33,6 +33,11 @@
    :artifact "kio"
    :name     "1.0"})
 
+(def test-tag-latest
+  {:team     "stups"
+   :artifact "kio"
+   :name     "latest"})
+
 (def test-tag-snapshot
   {:team     "stups"
    :artifact "kio"
@@ -168,6 +173,13 @@
       ; tag -SNAPSHOT image again -> ok
       (expect "tag snapshot again"
               200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
+                              {:body             (str "\"" (:id alternative) "\"")
+                               :content-type     :json
+                               :throw-exceptions false}))
+
+      ; tag latest -> not ok (to avoid mistakenly creating an immutable latest)
+      (expect "tag latest not ok"
+              409 (client/put (url "/repositories/" (:team test-tag-latest) "/" (:artifact test-tag-latest) "/tags/" (:name test-tag-latest))
                               {:body             (str "\"" (:id alternative) "\"")
                                :content-type     :json
                                :throw-exceptions false})))
