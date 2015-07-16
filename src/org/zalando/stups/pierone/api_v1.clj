@@ -91,21 +91,23 @@
   [parameters request db _]
   (require-write-access (:team parameters) request)
   (let [params-with-user (assoc parameters :user (get-in request [:tokeninfo "uid"]))]
-    (try
-      (sql/create-tag! params-with-user {:connection db})
-      (log/info "Stored new tag %s." params-with-user)
-      (resp "OK" request)
+    (if (= "latest" (:name params-with-user))
+      (resp "tag latest is not allowed" request :status 409)
+      (try
+        (sql/create-tag! params-with-user {:connection db})
+        (log/info "Stored new tag %s." params-with-user)
+        (resp "OK" request)
 
-      ; TODO check for hystrix exception and replace sql above with cmd- version
-      (catch SQLException e
-        (if (.endsWith (:name params-with-user) "-SNAPSHOT")
-          (do
-            (sql/cmd-update-tag! params-with-user {:connection db})
-            (log/info "Updated snapshot tag %s." params-with-user)
-            (resp "OK" request))
-          (do
-            (log/warn "Prevented update of tag: %s" (str e))
-            (resp "tag already exists" request :status 409)))))))
+        ; TODO check for hystrix exception and replace sql above with cmd- version
+        (catch SQLException e
+          (if (.endsWith (:name params-with-user) "-SNAPSHOT")
+            (do
+              (sql/cmd-update-tag! params-with-user {:connection db})
+              (log/info "Updated snapshot tag %s." params-with-user)
+              (resp "OK" request))
+            (do
+              (log/warn "Prevented update of tag: %s" (str e))
+              (resp "tag already exists" request :status 409))))))))
 
 (defn put-images
   "Dummy call. this is the final call from Docker client when pushing an image
@@ -126,7 +128,7 @@
     (sql/create-image!
       {:image    image
        :metadata (json/write-str metadata)
-       :parent   (:parent metadata)
+       :parent   (get metadata "parent")
        :user     (get-in request [:tokeninfo "uid"])}
       {:connection db})
     (log/debug "Stored new image metadata %s." image)
@@ -152,8 +154,8 @@
 (defn get-scm-source-data
   [tmp-file]
   (try
-    (let [fis (FileInputStream. tmp-file)
-          tar-stream (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
+    (with-open [fis (FileInputStream. tmp-file)
+                tar-stream (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
       (loop []
         (when-let [entry (.getNextTarEntry tar-stream)]
           (if (= (.getName entry) "scm-source.json")

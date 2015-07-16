@@ -3,11 +3,15 @@
             [org.zalando.stups.pierone.sql :as sql]
             [ring.util.response :as ring]
             [org.zalando.stups.friboo.ring :as fring]
+            [environ.core :refer [env]]
             [org.zalando.stups.pierone.api-v2]
             [org.zalando.stups.pierone.api-v1]))
 
+(def api-definition-suffix
+  (or (:http-api-definition-suffix env) ""))
+
 ; define the API component and its dependencies
-(def-http-component API "api/pierone-api.yaml" [db storage])
+(def-http-component API (str "api/pierone-api" api-definition-suffix ".yaml") [db storage])
 
 (def default-http-configuration
   {:http-port 8080})

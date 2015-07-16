@@ -11,7 +11,7 @@
 
 (def test-images-hierarchy
   [{:id       "img1"
-    :metadata "{\"id\": \"img1\", \"parent\": \"img2\"}"
+    :metadata "{\"id\": \"img1\", \"parent\": \"img2\", \"key/with/slash\": \"test\"}"
     :data     (io/input-stream (.getBytes "img1data"))}
    {:id       "img2"
     :metadata "{\"id\": \"img2\", \"parent\": \"img3\"}"
@@ -32,6 +32,11 @@
   {:team     "stups"
    :artifact "kio"
    :name     "1.0"})
+
+(def test-tag-latest
+  {:team     "stups"
+   :artifact "kio"
+   :name     "latest"})
 
 (def test-tag-snapshot
   {:team     "stups"
@@ -96,23 +101,24 @@
                                :content-type     :json})))
     ; pull images -> all images available
     (doseq [image test-images-hierarchy]
-      (expect "pull metadata"
-              200 (client/get (url "/images/" (:id image) "/json")
-                              {:throw-exceptions false}))
       (let [body (expect "pull metadata"
+              200 (client/get (url "/images/" (:id image) "/json")
+                              {:throw-exceptions false}))]
+        (is (= (json/read-str body) (json/read-str (:metadata image)))))
+      (let [body (expect "pull layer"
                          200 (client/get (url "/images/" (:id image) "/layer")
                                          {:throw-exceptions false}))]
         (= body (:data image))))
 
     ; check ancestry -> all images in ancestry
     (let [root (first test-images-hierarchy)
-          ancestry (expect "pull metadata"
+          ancestry (expect "get ancestry"
                            200 (client/get (url "/images/" (:id root) "/ancestry")
                                            {:throw-exceptions false}))
-          ancestry (into #{} ancestry)]
-      (= (count ancestry) (count test-images-hierarchy))
-      (doseq [image test-image-single]
-        (= true (ancestry (:id image)))))
+          ancestry (into #{} (json/read-str ancestry))]
+      (is (= (count ancestry) (count test-images-hierarchy)))
+      (doseq [image test-images-hierarchy]
+        (is (contains? ancestry (:id image)))))
 
     ; push image metadata without binary data does not block a new upload
     (expect "upload metadata"
@@ -151,7 +157,7 @@
       (let [result (json/read-str (expect "list tags"
                            200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
                                            {:throw-exceptions false})))]
-        (= (count result) 1 "list tags: count")
+        (is (= (count result) 1))
         (println result)
         (let [[tag image] (first result)]
           (= tag (:name test-tag) "list tags: tag")
@@ -167,6 +173,13 @@
       ; tag -SNAPSHOT image again -> ok
       (expect "tag snapshot again"
               200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
+                              {:body             (str "\"" (:id alternative) "\"")
+                               :content-type     :json
+                               :throw-exceptions false}))
+
+      ; tag latest -> not ok (to avoid mistakenly creating an immutable latest)
+      (expect "tag latest not ok"
+              409 (client/put (url "/repositories/" (:team test-tag-latest) "/" (:artifact test-tag-latest) "/tags/" (:name test-tag-latest))
                               {:body             (str "\"" (:id alternative) "\"")
                                :content-type     :json
                                :throw-exceptions false})))
