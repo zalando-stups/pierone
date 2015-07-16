@@ -1,4 +1,4 @@
-FROM zalando/openjdk:8u40-b09-4
+FROM zalando/openjdk:8u45-b14-5
 
 MAINTAINER Zalando SE
 
@@ -12,4 +12,4 @@ ENV HTTP_PORT 8080
 COPY target/pierone.jar /
 COPY target/scm-source.json /
 
-CMD java $(java-dynamic-memory-opts) -Dhystrix.command.default.execution.timeout.enabled=false -jar /pierone.jar
+CMD java $(java-dynamic-memory-opts) $(appdynamics-agent) -Dhystrix.command.default.execution.timeout.enabled=false -jar /pierone.jar
