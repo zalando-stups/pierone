@@ -34,8 +34,13 @@
   "Lists all tags of an artifact."
   [parameters _ db _]
   (let [result (sql/cmd-list-tags parameters {:connection db})]
-    (-> (ring/response result)
-        (fring/content-type-json))))
+    (if (seq result))
+        ; issue #20
+        ; this check is sufficient because an artifact cannot exist without a tag.
+        ; if we have no results, then either team or artifact do not exist
+        (-> (ring/response result)
+            (fring/content-type-json))
+        (ring/not-found nil))))
 
 (defn get-scm-source
   "Get SCM source information"
