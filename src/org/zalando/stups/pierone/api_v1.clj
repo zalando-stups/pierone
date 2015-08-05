@@ -74,7 +74,8 @@
   (resp "OK" request))
 
 (defn get-tags
-  "Get a map of all tags for an artifact with its images."
+  "Get a map of all tags for an artifact with its images. Also includes a 'latest' tag
+   that references the image of the most recently created tag."
   [parameters request db _]
   (let [db-tags (sql/cmd-read-tags parameters {:connection db})
         merge-tag (fn [tags tag] (merge tags {(:name tag)
@@ -96,7 +97,7 @@
           (resp all-tags request)))))
 
 (defn put-tag
-  "Stores a tag. Only '*-SNAPSHOT' tags are mutable."
+  "Stores a tag. Only '*-SNAPSHOT' tags are mutable. 'latest' is not allowed."
   [parameters request db _]
   (require-write-access (:team parameters) request)
   (let [params-with-user (assoc parameters :user (get-in request [:tokeninfo "uid"]))]
