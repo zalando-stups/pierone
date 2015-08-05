@@ -76,7 +76,7 @@
 
     ; v1 compatibility check
     (expect "ping" 200 (client/get (url "/_ping") {:throw-exceptions false}))
-
+    
     ; push all images
     (doseq [image test-images-hierarchy]
       (expect "no metadata"
@@ -157,7 +157,7 @@
       (let [result (json/read-str (expect "list tags"
                            200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
                                            {:throw-exceptions false})))]
-        (is (= (count result) 1))
+        (is (= (count result) 2)) ; contains the actual tag and virtual "latest" tag
         (println result)
         (let [[tag image] (first result)]
           (= tag (:name test-tag) "list tags: tag")

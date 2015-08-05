@@ -76,15 +76,24 @@
 (defn get-tags
   "Get a map of all tags for an artifact with its images."
   [parameters request db _]
-  (let [tags (sql/cmd-read-tags parameters {:connection db})]
-    (if (empty? tags)
-      (resp {} request :status 404)
-      (let [tags (reduce
-                   (fn [tags tag]
-                     (merge tags {(:name tag)
-                                  (:image tag)}))
-                   {} tags)]
-        (resp tags request)))))
+  (let [db-tags (sql/cmd-read-tags parameters {:connection db})
+        merge-tag (fn [tags tag] (merge tags {(:name tag)
+                                              (:image tag)}))]
+    (if (empty? db-tags)
+        (resp {} request :status 404)
+        (let [tags (reduce merge-tag
+                           {}
+                           db-tags)
+              ; search for latest tag, e.g. the one that was last created
+              latest-tag (reduce (fn [tag1 tag2]
+                                     (if (>= (:created tag1)
+                                             (:created tag2))
+                                         tag1
+                                         tag2))
+                                 db-tags)
+              all-tags (merge-tag tags {:name "latest"
+                                        :image (:image latest-tag)})]
+          (resp all-tags request)))))
 
 (defn put-tag
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable."
