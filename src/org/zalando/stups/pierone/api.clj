@@ -34,7 +34,7 @@
   "Lists all tags of an artifact."
   [parameters _ db _]
   (let [result (sql/cmd-list-tags parameters {:connection db})]
-    (if (seq result))
+    (if (seq result)
         ; issue #20
         ; this check is sufficient because an artifact cannot exist without a tag.
         ; if we have no results, then either team or artifact do not exist
