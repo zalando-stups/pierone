@@ -76,7 +76,7 @@
 
     ; v1 compatibility check
     (expect "ping" 200 (client/get (url "/_ping") {:throw-exceptions false}))
-    
+
     ; push all images
     (doseq [image test-images-hierarchy]
       (expect "no metadata"
