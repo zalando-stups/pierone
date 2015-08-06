@@ -41,6 +41,18 @@ definitions:
       created_by:
         type: string
         example: hjacobs
+  TagInformation:
+    type: object
+    properties:
+      name:
+        type: string
+        example: "1.0"
+      artifact:
+        type: string
+        example: pierone
+      team:
+        type: string
+        example: stups
 
 paths:
 
@@ -482,6 +494,31 @@ paths:
           description: Return scm-source.json
           schema:
             $ref: "#/definitions/ScmSourceInformation"
+
+  /images/{prefix}:
+    get:
+      summary: Get tags for image
+      description: Get tags that point to this image
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/get-tags-for-image
+      security:
+        - oauth2: [uid]
+      parameters:
+        - name: prefix
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Return tags
+          type: array
+          items:
+            $ref: "#/definitions/TagInformation"
+        "412":
+          description: Prefix matches more than one image id
+        "404":
+          description: Prefix does not match any image id
 
 securityDefinitions:
   oauth2:
