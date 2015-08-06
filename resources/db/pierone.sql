@@ -17,6 +17,18 @@ SELECT t_name AS name,
  WHERE t_team = :team
    AND t_artifact = :artifact;
 
+-- name: get-images
+SELECT i_id as id
+  FROM images
+ WHERE i_id LIKE (:image || '%');
+
+-- name: list-tags-for-image
+SELECT t_name AS name,
+       t_team AS team,
+       t_artifact AS artifact
+  FROM tags
+ WHERE t_image_id LIKE (:image || '%');
+
 -- name: get-scm-source
 WITH RECURSIVE ancestry(id, next, path) AS (
     SELECT i_id, i_parent_id, ARRAY[i_id]

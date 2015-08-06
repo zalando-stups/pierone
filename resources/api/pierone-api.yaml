@@ -495,17 +495,17 @@ paths:
           schema:
             $ref: "#/definitions/ScmSourceInformation"
 
-  /images/{prefix}:
+  /images/{image}:
     get:
-      summary: Get tags for image
-      description: Get tags that point to this image
+      summary: List tags for image
+      description: Lists tags that point to this image
       tags:
         - Pier One API
-      operationId: org.zalando.stups.pierone.api/get-tags-for-image
+      operationId: org.zalando.stups.pierone.api/list-tags-for-image
       security:
         - oauth2: [uid]
       parameters:
-        - name: prefix
+        - name: image
           in: path
           required: true
           type: string
