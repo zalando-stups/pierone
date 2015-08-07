@@ -495,7 +495,7 @@ paths:
           schema:
             $ref: "#/definitions/ScmSourceInformation"
 
-  /images/{image}:
+  /tags/{image}:
     get:
       summary: List tags for image
       description: Lists tags that point to this image
