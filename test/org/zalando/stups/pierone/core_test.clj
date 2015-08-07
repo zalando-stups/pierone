@@ -147,9 +147,9 @@
                                :throw-exceptions false}))
 
       ; reverse search image
-      (is 200 (:status (client/get (str test-url "/images/" (:id root)))))
+      (is 200 (:status (client/get (str test-url "/tags/" (:id root)))))
       
-      (let [result (-> (client/get (str test-url "/images/" (:id root)))
+      (let [result (-> (client/get (str test-url "/tags/" (:id root)))
                        (:body)
                        (json/read-str :key-fn keyword)
                        (first))]
@@ -157,9 +157,9 @@
           (is (:team result) (:team test-tag))
           (is (:name result) (:name test-tag)))
       
-      (is 404 (:status (client/get (str test-url "/images/asdfa")
+      (is 404 (:status (client/get (str test-url "/tags/asdfa")
                                    {:throw-exceptions false})))
-      (is 412 (:status (client/get (str test-url "/images/img")
+      (is 412 (:status (client/get (str test-url "/tags/img")
                                    {:throw-exceptions false})))
 
       ; tag image again -> not ok
