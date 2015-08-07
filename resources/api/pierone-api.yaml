@@ -512,13 +512,14 @@ paths:
       responses:
         "200":
           description: Return tags
-          type: array
-          items:
-            $ref: "#/definitions/TagInformation"
-        "412":
-          description: Prefix matches more than one image id
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/TagInformation"
         "404":
           description: Prefix does not match any image id
+        "412":
+          description: Prefix matches more than one image id
 
 securityDefinitions:
   oauth2:
