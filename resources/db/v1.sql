@@ -1,6 +1,7 @@
 -- name: read-tags
 SELECT t_name AS name,
-       t_image_id AS image
+       t_image_id AS image,
+       t_created AS created
   FROM tags
  WHERE t_team = :team
    AND t_artifact = :artifact;

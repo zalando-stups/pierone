@@ -173,11 +173,14 @@
       (let [result (json/read-str (expect "list tags"
                            200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
                                            {:throw-exceptions false})))]
-        (is (= (count result) 1))
+        (is (= (count result) 2)) ; contains the actual tag and virtual "latest" tag
         (println result)
-        (let [[tag image] (first result)]
-          (= tag (:name test-tag) "list tags: tag")
-          (= image (:id root) "list tags: image")))
+        (let [[real-tag real-image] (first result)
+              [latest-tag latest-image] (second result)]
+          (= real-tag (:name test-tag) "list tags: tag")
+          (= real-image (:id root) "list tags: image")
+          (= latest-tag "latest")
+          (= latest-image real-image)))
 
       ; tag -SNAPSHOT image -> ok
       (expect "tag snapshot"
