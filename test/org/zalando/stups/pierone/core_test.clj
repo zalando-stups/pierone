@@ -146,6 +146,22 @@
                                :content-type     :json
                                :throw-exceptions false}))
 
+      ; reverse search image
+      (is 200 (:status (client/get (str test-url "/tags/" (:id root)))))
+      
+      (let [result (-> (client/get (str test-url "/tags/" (:id root)))
+                       (:body)
+                       (json/read-str :key-fn keyword)
+                       (first))]
+          (is (:artifact result) (:artifact test-tag))
+          (is (:team result) (:team test-tag))
+          (is (:name result) (:name test-tag)))
+      
+      (is 404 (:status (client/get (str test-url "/tags/asdfa")
+                                   {:throw-exceptions false})))
+      (is 412 (:status (client/get (str test-url "/tags/img")
+                                   {:throw-exceptions false})))
+
       ; tag image again -> not ok
       (expect "tag release again"
               409 (client/put (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/" (:name test-tag))

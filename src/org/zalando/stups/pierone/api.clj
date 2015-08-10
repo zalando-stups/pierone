@@ -44,3 +44,21 @@
     (-> (ring/response result)
         (ring/status (if result 200 404))
         (fring/content-type-json))))
+
+(defn list-tags-for-image
+  "Returns tags that point to this image"
+  [parameters _ db _]
+  (let [conn {:connection db}
+        images (sql/cmd-get-images parameters conn)]
+    (if (seq images)
+        ; not empty
+        (if (> 1 (count images))
+            ; more than one image matched
+            (ring/status (ring/response nil)
+                         412)
+            ; exactly one image matched
+            (-> (sql/cmd-list-tags-for-image parameters conn)
+                (ring/response)
+                (fring/content-type-json)))
+        ;empty
+        (ring/not-found nil))))
