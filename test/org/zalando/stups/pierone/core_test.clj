@@ -169,7 +169,14 @@
                                :content-type     :json
                                :throw-exceptions false}))
 
-      ; check tag list
+      ; check tag list for not existing artifact -> not ok
+      (is 404 (:status (client/get (str test-url "/teams/" (:team test-tag) "/asdfasdf/tags")
+                                   {:throw-exceptions false})))
+      
+      (is 200 (:status (client/get (str test-url "/teams/" (:team test-tag) "/" (:artifact test-tag) "/tags")
+                                   {:throw-exceptions false})))
+      
+      ; check tag list for existing artifact -> ok
       (let [result (json/read-str (expect "list tags"
                            200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
                                            {:throw-exceptions false})))]
