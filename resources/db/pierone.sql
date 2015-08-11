@@ -12,7 +12,9 @@ SELECT t_artifact AS artifact
 -- name: list-tags
 SELECT t_name AS name,
        t_created AS created,
-       t_created_by AS created_by
+       t_created_by AS created_by,
+       t_last_modified AS last_modified,
+       t_last_modified_by AS last_modified_by
   FROM tags
  WHERE t_team = :team
    AND t_artifact = :artifact;
