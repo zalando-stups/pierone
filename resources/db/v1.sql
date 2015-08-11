@@ -20,7 +20,8 @@ UPDATE tags
        t_created = now()
  WHERE t_team = :team
    AND t_artifact = :artifact
-   AND t_name = :name;
+   AND t_name = :name
+   AND t_image_id != :image;
 
 -- name: create-image!
 INSERT INTO images
