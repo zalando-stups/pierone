@@ -100,21 +100,28 @@
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable. 'latest' is not allowed."
   [parameters request db _]
   (require-write-access (:team parameters) request)
-  (let [params-with-user (assoc parameters :user (get-in request [:tokeninfo "uid"]))]
-    (if (= "latest" (:name params-with-user))
+  (let [connection {:connection db}
+        tag-name (:name parameters)
+        uid (get-in request [:tokeninfo "uid"])
+        params-with-user (merge parameters {:user uid})]
+    (if (= "latest" tag-name)
       (resp "tag latest is not allowed" request :status 409)
       (try
-        (sql/create-tag! params-with-user {:connection db})
+        (sql/create-tag! params-with-user connection)
         (log/info "Stored new tag %s." params-with-user)
         (resp "OK" request)
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
-          (if (.endsWith (:name params-with-user) "-SNAPSHOT")
-            (do
-              (sql/cmd-update-tag! params-with-user {:connection db})
-              (log/info "Updated snapshot tag %s." params-with-user)
-              (resp "OK" request))
+          (if (.endsWith tag-name "-SNAPSHOT")
+            (let [updated-rows (sql/cmd-update-tag! params-with-user connection)]
+              (if (> 0 updated-rows)
+                (do
+                  (log/info "Updated snapshot tag %s." params-with-user)
+                  (resp "OK" request))
+                (do
+                  (log/info "Did not update snapshot tag %s because image is the same." params-with-user)
+                  (resp "tag not modified" request))))
             (do
               (log/warn "Prevented update of tag: %s" (str e))
               (resp "tag already exists" request :status 409))))))))

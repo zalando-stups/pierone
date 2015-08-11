@@ -197,11 +197,18 @@
                                :throw-exceptions false}))
 
       ; tag -SNAPSHOT image again -> ok
-      (expect "tag snapshot again"
-              200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
-                              {:body             (str "\"" (:id alternative) "\"")
-                               :content-type     :json
-                               :throw-exceptions false}))
+      (is "OK" (expect "tag snapshot again"
+                       200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
+                                       {:body             (str "\"" (:id alternative) "\"")
+                                        :content-type     :json
+                                        :throw-exceptions false})))
+      
+      ; tag -SNAPSHOT with same image
+      (is "tag not modified" (expect "tag snapshot with same image"
+                                     200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
+                                                     {:body             (str "\"" (:id alternative) "\"")
+                                                      :content-type     :json
+                                                      :throw-exceptions false})))
 
       ; tag latest -> not ok (to avoid mistakenly creating an immutable latest)
       (expect "tag latest not ok"
