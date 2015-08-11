@@ -7,17 +7,25 @@ SELECT t_name AS name,
    AND t_artifact = :artifact;
 
 -- name: create-tag!
-INSERT INTO tags
-       (t_team, t_artifact, t_name, t_image_id, t_created_by)
-VALUES (:team, :artifact, :name, :image, :user);
+INSERT INTO tags (t_team,
+                  t_artifact,
+                  t_name,
+                  t_image_id,
+                  t_created_by,
+                  t_last_modified_by)
+     VALUES (:team,
+             :artifact,
+             :name,
+             :image,
+             :user,
+             :user);
 
 -- name: update-tag!
+-- This is only called for SNAPSHOT tags
 UPDATE tags
    SET t_image_id = :image,
-       -- updating is like overwriting (delete+create)
-       -- i.e. update created timestamp and user
-       t_created_by = :user,
-       t_created = now()
+       t_last_modified_by = :user,
+       t_last_modified = NOW()
  WHERE t_team = :team
    AND t_artifact = :artifact
    AND t_name = :name;

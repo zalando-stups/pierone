@@ -100,19 +100,22 @@
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable. 'latest' is not allowed."
   [parameters request db _]
   (require-write-access (:team parameters) request)
-  (let [params-with-user (assoc parameters :user (get-in request [:tokeninfo "uid"]))]
-    (if (= "latest" (:name params-with-user))
+  (let [connection {:connection db}
+        uid (get-in request [:tokeninfo "uid"])
+        tag-name (:name parameters)
+        params-with-user (merge parameters {:user uid})]
+    (if (= "latest" tag-name)
       (resp "tag latest is not allowed" request :status 409)
       (try
-        (sql/create-tag! params-with-user {:connection db})
+        (sql/create-tag! params-with-user connection)
         (log/info "Stored new tag %s." params-with-user)
         (resp "OK" request)
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
-          (if (.endsWith (:name params-with-user) "-SNAPSHOT")
+          (if (.endsWith tag-name "-SNAPSHOT")
             (do
-              (sql/cmd-update-tag! params-with-user {:connection db})
+              (sql/cmd-update-tag! params-with-user connection)
               (log/info "Updated snapshot tag %s." params-with-user)
               (resp "OK" request))
             (do

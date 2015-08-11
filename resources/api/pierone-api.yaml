@@ -37,8 +37,16 @@ definitions:
         example: "1.0"
       created:
         type: string
+        format: date-time
         example: 2015-05-07T15:49:51.230+0200
       created_by:
+        type: string
+        example: hjacobs
+      last_modified:
+        type: string
+        format: date-time
+        example: 2015-05-07T15:49:51.230+0200
+      last_modified_by:
         type: string
         example: hjacobs
   TagInformation:
