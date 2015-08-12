@@ -9,6 +9,8 @@
             [io.sarnowski.swagger1st.util.security :as security]
             [org.zalando.stups.friboo.user :as u]
             [schema.core :as schema]
+            [clj-time.core :as t]
+            [clj-time.coerce :as tcoerce]
             [clojure.data.codec.base64 :as b64]
             [com.netflix.hystrix.core :refer [defcommand]]
             [org.zalando.stups.friboo.config :refer [require-config]]
@@ -87,8 +89,8 @@
                            db-tags)
               ; search for latest tag, e.g. the one that was last created
               latest-tag (reduce (fn [tag1 tag2]
-                                     (if (>= (:created tag1)
-                                             (:created tag2))
+                                     (if (t/after? (tcoerce/from-sql-time (:created tag1))
+                                                   (tcoerce/from-sql-time (:created tag2)))
                                          tag1
                                          tag2))
                                  db-tags)

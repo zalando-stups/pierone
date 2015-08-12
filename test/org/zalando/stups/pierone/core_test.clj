@@ -175,19 +175,6 @@
       
       (is 200 (:status (client/get (str test-url "/teams/" (:team test-tag) "/" (:artifact test-tag) "/tags")
                                    {:throw-exceptions false})))
-      
-      ; check tag list for existing artifact -> ok
-      (let [result (json/read-str (expect "list tags"
-                           200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
-                                           {:throw-exceptions false})))]
-        (is (= (count result) 2)) ; contains the actual tag and virtual "latest" tag
-        (println result)
-        (let [[real-tag real-image] (first result)
-              [latest-tag latest-image] (second result)]
-          (= real-tag (:name test-tag) "list tags: tag")
-          (= real-image (:id root) "list tags: image")
-          (= latest-tag "latest")
-          (= latest-image real-image)))
 
       ; tag -SNAPSHOT image -> ok
       (expect "tag snapshot"
@@ -215,7 +202,23 @@
               409 (client/put (url "/repositories/" (:team test-tag-latest) "/" (:artifact test-tag-latest) "/tags/" (:name test-tag-latest))
                               {:body             (str "\"" (:id alternative) "\"")
                                :content-type     :json
-                               :throw-exceptions false})))
+                               :throw-exceptions false}))
+
+      ; check tag list for existing artifact -> ok
+      (let [result (json/read-str (expect "list tags"
+                           200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
+                                           {:throw-exceptions false})))]
+        (is (= (count result) 3)) ; contains the test tag, snapshot tag and virtual "latest" tag
+        (println result)
+        (let [[real-tag real-image] (first result)
+              [snapshot-tag snapshot-image] (second result)
+              [latest-tag latest-image] (last result)]
+          (= real-tag (:name test-tag))
+          (= real-image (:id root))
+          (= snapshot-tag (:name test-tag-snapshot))
+          (= snapshot-image (:id alternative))
+          (= latest-tag "latest")
+          (= latest-image real-image))))
 
     ; dummy calls that have to exist
     (expect "search" 200 (client/get (url "/search")
