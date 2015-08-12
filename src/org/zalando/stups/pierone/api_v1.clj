@@ -108,7 +108,7 @@
   [{:keys [team artifact name]} request db _]
   (let [tags (load-tags team artifact db)]
     (if (contains? tags name)
-      (resp (get tags name) request)
+      (resp (str "\"" (get tags name) "\"") request)
       (resp "not found" request :status 404))))
 
 (defn put-tag
