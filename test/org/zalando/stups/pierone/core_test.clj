@@ -102,12 +102,13 @@
     ; pull images -> all images available
     (doseq [image test-images-hierarchy]
       (let [body (expect "pull metadata"
-              200 (client/get (url "/images/" (:id image) "/json")
-                              {:throw-exceptions false}))]
+                         200 (client/get (url "/images/" (:id image) "/json")
+                                         {:throw-exceptions false}))]
         (is (= (json/read-str body) (json/read-str (:metadata image)))))
       (let [body (expect "pull layer"
                          200 (client/get (url "/images/" (:id image) "/layer")
                                          {:throw-exceptions false}))]
+        ; TODO actually check with is
         (= body (:data image))))
 
     ; check ancestry -> all images in ancestry
@@ -147,20 +148,20 @@
                                :throw-exceptions false}))
 
       ; reverse search image
-      (is 200 (:status (client/get (str test-url "/tags/" (:id root)))))
+      (is (= 200 (:status (client/get (str test-url "/tags/" (:id root))))))
       
       (let [result (-> (client/get (str test-url "/tags/" (:id root)))
                        (:body)
                        (json/read-str :key-fn keyword)
                        (first))]
-          (is (:artifact result) (:artifact test-tag))
-          (is (:team result) (:team test-tag))
-          (is (:name result) (:name test-tag)))
+          (is (= (:artifact result) (:artifact test-tag)))
+          (is (= (:team result) (:team test-tag)))
+          (is (= (:name result) (:name test-tag))))
       
-      (is 404 (:status (client/get (str test-url "/tags/asdfa")
-                                   {:throw-exceptions false})))
-      (is 412 (:status (client/get (str test-url "/tags/img")
-                                   {:throw-exceptions false})))
+      (is (= 404 (:status (client/get (str test-url "/tags/asdfa")
+                                      {:throw-exceptions false}))))
+      (is (= 412 (:status (client/get (str test-url "/tags/img")
+                                      {:throw-exceptions false}))))
 
       ; tag image again -> not ok
       (expect "tag release again"
@@ -170,11 +171,11 @@
                                :throw-exceptions false}))
 
       ; check tag list for not existing artifact -> not ok
-      (is 404 (:status (client/get (str test-url "/teams/" (:team test-tag) "/asdfasdf/tags")
-                                   {:throw-exceptions false})))
+      (is (= 404 (:status (client/get (str test-url "/teams/" (:team test-tag) "/artifacts/asdfasdf/tags")
+                                      {:throw-exceptions false}))))
       
-      (is 200 (:status (client/get (str test-url "/teams/" (:team test-tag) "/" (:artifact test-tag) "/tags")
-                                   {:throw-exceptions false})))
+      (is (= 200 (:status (client/get (str test-url "/teams/" (:team test-tag) "/artifacts/" (:artifact test-tag) "/tags")
+                                      {:throw-exceptions false}))))
 
       ; tag -SNAPSHOT image -> ok
       (expect "tag snapshot"
@@ -184,18 +185,18 @@
                                :throw-exceptions false}))
 
       ; tag -SNAPSHOT image again -> ok
-      (is "OK" (expect "tag snapshot again"
-                       200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
-                                       {:body             (str "\"" (:id alternative) "\"")
-                                        :content-type     :json
-                                        :throw-exceptions false})))
+      (is (= "OK" (expect "tag snapshot again"
+                          200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
+                                          {:body             (str "\"" (:id alternative) "\"")
+                                           :content-type     :json
+                                           :throw-exceptions false}))))
       
       ; tag -SNAPSHOT with same image
-      (is "tag not modified" (expect "tag snapshot with same image"
-                                     200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
-                                                     {:body             (str "\"" (:id alternative) "\"")
-                                                      :content-type     :json
-                                                      :throw-exceptions false})))
+      (is (= "tag not modified" (expect "tag snapshot with same image"
+                                        200 (client/put (url "/repositories/" (:team test-tag-snapshot) "/" (:artifact test-tag-snapshot) "/tags/" (:name test-tag-snapshot))
+                                                        {:body             (str "\"" (:id alternative) "\"")
+                                                         :content-type     :json
+                                                         :throw-exceptions false}))))
 
       ; tag latest -> not ok (to avoid mistakenly creating an immutable latest)
       (expect "tag latest not ok"
@@ -206,32 +207,34 @@
 
       ; check tag list for existing artifact -> ok
       (let [result (json/read-str (expect "list tags"
-                           200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
-                                           {:throw-exceptions false})))]
+                                          200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags")
+                                                          {:throw-exceptions false})))]
         (is (= (count result) 3)) ; contains the test tag, snapshot tag and virtual "latest" tag
         (println result)
-        (let [[real-tag real-image] (first result)
+        (let [[real-tag real-image] (last result)
               [snapshot-tag snapshot-image] (second result)
-              [latest-tag latest-image] (last result)]
-          (= real-tag (:name test-tag))
-          (= real-image (:id root))
-          (= snapshot-tag (:name test-tag-snapshot))
-          (= snapshot-image (:id alternative))
-          (= latest-tag "latest")
-          (= latest-image real-image)))
+              [latest-tag latest-image] (first result)]
+          (is (= real-tag (:name test-tag)))
+          (is (= real-image (:id root)))
+          (is (= snapshot-tag (:name test-tag-snapshot)))
+          (is (= snapshot-image (:id alternative)))
+          (is (= latest-tag "latest"))
+          (is (= latest-image snapshot-image))))
       
       ; check get image for single tag
-      (is (:id root) (expect "image for single tag ok"
-                             200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/" (:name test-tag))
-                                             {:throw-exceptions false})))
+      (is (= (str "\"" (:id root) "\"")
+             (expect "image for single tag ok"
+                     200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/" (:name test-tag))
+                                     {:throw-exceptions false}))))
       
-      (is (:id root) (expect "image for latest tag ok"
-                             200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/latest")
-                                             {:throw-exceptions false})))
+      (is (= (str "\"" (:id alternative) "\"")
+             (expect "image for latest tag ok"
+                     200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/latest")
+                                     {:throw-exceptions false}))))
       
-      (is "not found" (expect "image for not existing tag not ok"
-                              404 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/asdf")
-                                              {:throw-exceptions false}))))
+      (is (= "not found" (expect "image for not existing tag not ok"
+                                 404 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/asdf")
+                                                 {:throw-exceptions false})))))
 
     ; dummy calls that have to exist
     (expect "search" 200 (client/get (url "/search")
