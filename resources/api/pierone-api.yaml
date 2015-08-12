@@ -169,6 +169,33 @@ paths:
           description: Repository/tags not found
 
   /v1/repositories/{team}/{artifact}/tags/{name}:
+    get:
+      summary: get image for tag
+      description: Returns the image id for given tag
+      tags:
+        - Docker Registry API v1
+      operationId: org.zalando.stups.pierone.api-v1/get-image-for-tag
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+      parameters:
+        - name: team
+          in: path
+          type: string
+          required: true
+        - name: artifact
+          in: path
+          type: string
+          required: true
+        - name: name
+          in: path
+          type: string
+          required: true
+      responses:
+        "200":
+          description: Tag exists
+        "404":
+          description: Tag does not exist
+
     put:
       summary: store tag
       description: Stores a tag in the registry for the given artifact.

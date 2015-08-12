@@ -75,28 +75,41 @@
   (require-write-access team request)
   (resp "OK" request))
 
+(defn- load-tags
+  "Loads all tags and includes fake latest"
+  [team artifact db]
+  (let [db-tags (sql/cmd-read-tags {:team team :artifact artifact} {:connection db})
+        merge-tag (fn [tags tag] (merge tags {(:name tag)
+                                              (:image tag)}))
+        tags (reduce merge-tag
+                     {}
+                     db-tags)
+        ; search for latest tag, e.g. the one that was last created
+        latest-tag (reduce (fn [tag1 tag2]
+                               (if (t/after? (tcoerce/from-sql-time (:created tag1))
+                                             (tcoerce/from-sql-time (:created tag2)))
+                                   tag1
+                                   tag2))
+                           db-tags)]
+    (merge-tag tags {:name "latest"
+                     :image (:image latest-tag)})))
+
 (defn get-tags
   "Get a map of all tags for an artifact with its images. Also includes a 'latest' tag
    that references the image of the most recently created tag."
-  [parameters request db _]
-  (let [db-tags (sql/cmd-read-tags parameters {:connection db})
-        merge-tag (fn [tags tag] (merge tags {(:name tag)
-                                              (:image tag)}))]
-    (if (empty? db-tags)
+  [{:keys [team artifact]} request db _]
+  (let [tags (load-tags team artifact db)]
+    (if (empty? tags)
         (resp {} request :status 404)
-        (let [tags (reduce merge-tag
-                           {}
-                           db-tags)
-              ; search for latest tag, e.g. the one that was last created
-              latest-tag (reduce (fn [tag1 tag2]
-                                     (if (t/after? (tcoerce/from-sql-time (:created tag1))
-                                                   (tcoerce/from-sql-time (:created tag2)))
-                                         tag1
-                                         tag2))
-                                 db-tags)
-              all-tags (merge-tag tags {:name "latest"
-                                        :image (:image latest-tag)})]
-          (resp all-tags request)))))
+        (resp tags request))))
+
+(defn get-image-for-tag
+  "Get the image id for given tag"
+  [{:keys [team artifact name]} request db _]
+  (let [tags (load-tags team artifact db)]
+    (if (contains? tags name)
+      (resp (get tags name) request)
+      (resp "not found" request :status 404))))
 
 (defn put-tag
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable. 'latest' is not allowed."
