@@ -211,9 +211,12 @@
         (is (= (count result) 3)) ; contains the test tag, snapshot tag and virtual "latest" tag
         (println result)
         (let [[real-tag real-image] (first result)
+              [snapshot-tag snapshot-image] (second result)
               [latest-tag latest-image] (last result)]
-          (= real-tag (:name test-tag) "list tags: tag")
-          (= real-image (:id root) "list tags: image")
+          (= real-tag (:name test-tag))
+          (= real-image (:id root))
+          (= snapshot-tag (:name test-tag-snapshot))
+          (= snapshot-image (:id alternative))
           (= latest-tag "latest")
           (= latest-image real-image))))
 
