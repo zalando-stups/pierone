@@ -57,7 +57,7 @@
         images (sql/cmd-get-images parameters conn)]
     (if (seq images)
         ; not empty
-        (if (> 1 (count images))
+        (if (> (count images) 1)
             ; more than one image matched
             (ring/status (ring/response nil)
                          412)

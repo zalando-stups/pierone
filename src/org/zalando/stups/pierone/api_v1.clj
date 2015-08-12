@@ -130,7 +130,7 @@
         (catch SQLException e
           (if (.endsWith tag-name "-SNAPSHOT")
             (let [updated-rows (sql/cmd-update-tag! params-with-user connection)]
-              (if (> 0 updated-rows)
+              (if (> updated-rows 0)
                 (do
                   (log/info "Updated snapshot tag %s." params-with-user)
                   (resp "OK" request))
