@@ -218,7 +218,20 @@
           (= snapshot-tag (:name test-tag-snapshot))
           (= snapshot-image (:id alternative))
           (= latest-tag "latest")
-          (= latest-image real-image))))
+          (= latest-image real-image)))
+      
+      ; check get image for single tag
+      (is (:id root) (expect "image for single tag ok"
+                             200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/" (:name test-tag))
+                                             {:throw-exceptions false})))
+      
+      (is (:id root) (expect "image for latest tag ok"
+                             200 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/latest")
+                                             {:throw-exceptions false})))
+      
+      (is "not found" (expect "image for not existing tag not ok"
+                              404 (client/get (url "/repositories/" (:team test-tag) "/" (:artifact test-tag) "/tags/asdf")
+                                              {:throw-exceptions false}))))
 
     ; dummy calls that have to exist
     (expect "search" 200 (client/get (url "/search")
