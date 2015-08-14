@@ -1,7 +1,8 @@
 (ns org.zalando.stups.pierone.test-utils
   (:require [clojure.java.jdbc :as jdbc]
+            [clojure.java.io :as io]
             [clojure.test :refer :all]
-            [clj-http.lite.client :as client]
+            [clj-http.client :as client]
             [org.zalando.stups.pierone.core :refer [run]]))
 
 (def base-url "http://localhost:8080")
@@ -22,7 +23,8 @@
     url))
 
 (defn http-opts [& args]
-  (let [default {:throw-exceptions false}
+  (let [default {:throw-exceptions false
+                 :debug false}
         body    (first args)
         content (second args)]
     (if (nil? body)
@@ -85,4 +87,4 @@
             (client/put (v1-url "/images/"
                                 (:id image)
                                 "/layer")
-                        (http-opts (:data image))))))
+                        (http-opts (io/input-stream (:data image)))))))

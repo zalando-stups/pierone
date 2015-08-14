@@ -2,7 +2,8 @@
   (:require [org.zalando.stups.pierone.test-data :as d]
             [org.zalando.stups.pierone.test-utils :as u]
             [clojure.test :refer :all]
-            [clj-http.lite.client :as client]
+            [clojure.java.io :as io]
+            [clj-http.client :as client]
             [clojure.data.json :as json]
             [com.stuartsierra.component :as component]))
 
@@ -34,13 +35,20 @@
                                        (u/http-opts)))]
         (is (= (json/read-str body)
                (json/read-str (:metadata image)))))
-      (let [body (u/expect 200
-                           (client/get (u/v1-url "/images/"
-                                                 (:id image)
-                                                 "/layer")
-                                       (u/http-opts)))]
-        ; TODO actually check with is
-        (= body (:data image))))
+      (let [response (client/get (u/v1-url "/images/"
+                                           (:id image)
+                                           "/layer")
+                                 (merge (u/http-opts)
+                                        {:as :byte-array}))
+            body (:body response)]
+        (u/expect 200
+                  response)
+        (is (= "application/octet-stream"
+               (get (:headers response)
+                    "content-type")))
+
+        (is (= (String. body)
+               (String. (:data image))))))
     ; verify ancestry
     (let [root (first d/images-hierarchy)
           ancestry (u/expect 200
@@ -132,16 +140,24 @@
                                            (u/http-opts)))
             result (json/read-str resp)]
         ; contains the test tag, snapshot tag and virtual "latest" tag
-        (is (= (count result) 3))
+        (is (= (count result)
+               3))
+
         (let [[latest-tag latest-image] (first result)
               [snapshot-tag snapshot-image] (second result)
               [real-tag real-image] (last result)]
-          (is (= real-tag (:name d/tag)))
-          (is (= real-image (:id root)))
-          (is (= snapshot-tag (:name d/snapshot-tag)))
-          (is (= snapshot-image (:id alternative)))
-          (is (= latest-tag "latest"))
-          (is (= latest-image snapshot-image))))
+          (is (= real-tag
+                 (:name d/tag)))
+          (is (= real-image
+                 (:id root)))
+          (is (= snapshot-tag
+                 (:name d/snapshot-tag)))
+          (is (= snapshot-image
+                 (:id alternative)))
+          (is (= latest-tag
+                 "latest"))
+          (is (= latest-image
+                 snapshot-image))))
 
       ; check get image for single tag
       (is (= (u/wrap-quotes (:id root))

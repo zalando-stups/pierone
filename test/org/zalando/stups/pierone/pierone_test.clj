@@ -3,7 +3,7 @@
             [org.zalando.stups.pierone.test-utils :as u]
             [clojure.test :refer :all]
             [clojure.data.json :as json]
-            [clj-http.lite.client :as client]
+            [clj-http.client :as client]
             [com.stuartsierra.component :as component]))
 
 (deftest pierone-test

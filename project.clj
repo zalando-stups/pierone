@@ -44,12 +44,12 @@
 
   :profiles {:uberjar {:aot :all}
 
-             :test    {:dependencies [[clj-http-lite "0.2.1"]
+             :test    {:dependencies [[clj-http "2.0.0"]
                                       [org.clojure/java.jdbc "0.3.7"]]}
 
              :dev     {:repl-options {:init-ns user}
                        :source-paths ["dev"]
                        :dependencies [[org.clojure/tools.namespace "0.2.10"]
                                       [org.clojure/java.classpath "0.2.2"]
-                                      [clj-http-lite "0.2.1"]
+                                      [clj-http "2.0.0"]
                                       [org.clojure/java.jdbc "0.3.7"]]}})

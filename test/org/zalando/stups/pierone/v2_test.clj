@@ -2,7 +2,7 @@
   (:require [org.zalando.stups.pierone.test-data :as d]
             [org.zalando.stups.pierone.test-utils :as u]
             [clojure.test :refer :all]
-            [clj-http.lite.client :as client]
+            [clj-http.client :as client]
             [com.stuartsierra.component :as component]))
 
 (deftest v2-test

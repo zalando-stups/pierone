@@ -4,13 +4,13 @@
 (def images-hierarchy
   [{:id       "img1"
     :metadata "{\"id\": \"img1\", \"parent\": \"img2\", \"key/with/slash\": \"test\"}"
-    :data     (io/input-stream (.getBytes "img1data"))}
+    :data     (.getBytes "img1data")}
    {:id       "img2"
     :metadata "{\"id\": \"img2\", \"parent\": \"img3\"}"
-    :data     (io/input-stream (.getBytes "img2data"))}
+    :data     (.getBytes "img2data")}
    {:id       "img3"
     :metadata "{\"id\": \"img3\"}"
-    :data     (io/input-stream (.getBytes "img3data"))}])
+    :data     (.getBytes "img3data")}])
 
 (def image-single
   {:id       "img4"
