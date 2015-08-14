@@ -35,7 +35,8 @@ WHERE i_id = :image
 
 -- name: accept-image!
 UPDATE images
-   SET i_accepted = TRUE
+   SET i_accepted = TRUE,
+       i_size = :size
  WHERE i_id = :image;
 
 -- name: create-scm-source-data!

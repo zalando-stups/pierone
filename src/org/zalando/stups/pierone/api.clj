@@ -67,3 +67,48 @@
                 (fring/content-type-json)))
         ;empty
         (ring/not-found nil))))
+
+(defn load-stats
+  "Loads usage statistics for a single team"
+  [team db]
+  (let [conn {:connection db}
+        artifacts (map :artifact
+                       (sql/cmd-list-artifacts {:team team} conn))
+        tags (apply #(sql/cmd-list-tags {:team team :artifact %} conn)
+                    artifacts)
+        all-images (sql/cmd-list-images nil conn)
+        images (->> tags
+                    (map #(sql/cmd-get-image-ancestry % conn))
+                    (flatten)
+                    (map :id)
+                    (into #{}))
+        storage (->> all-images
+                     (filter #(contains? images (:id %)))
+                     (map :size)
+                     (apply +))]
+    {:images (count images)
+     :storage storage
+     :artifacts (count artifacts)
+     :tags (count tags)}))
+
+(defn get-stats-per-team
+  "Returns statistics for a single team"
+  [{:keys [team]} _ db _]
+  (let [conn {:connection db}
+        result (load-stats team db)]
+    (-> result
+        (ring/response)
+        (fring/content-type-json))))
+
+(defn get-stats
+  "Returns statistics for all teams that have an artifact"
+  [_ _ db _]
+  (let [conn {:connection db}
+        teams (map :team (sql/cmd-list-teams nil conn))
+        result (map #(assoc {} :team %
+                               :stats (load-stats % db))
+                    teams)]
+    (-> result
+        (ring/response)
+        (fring/content-type-json))))
+    

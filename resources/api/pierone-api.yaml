@@ -53,6 +53,25 @@ definitions:
       team:
         type: string
         example: stups
+  TeamStatistic:
+    type: object
+    properties:
+      images:
+        type: integer
+      artifacts:
+        type: integer
+      tags:
+        type: integer
+      storage:
+        type: integer
+  TeamStatistics:
+    type: object
+    properties:
+      team:
+        type: string
+        example: stups
+      stats:
+        $ref: "#/definitions/TeamStatistic"
 
 paths:
 
@@ -547,6 +566,42 @@ paths:
           description: Prefix does not match any image id
         "412":
           description: Prefix matches more than one image id
+  /stats/teams:
+    get:
+      summary: Get usage statistics for all teams
+      description: Get usage statistics for all teams
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/get-stats
+      security:
+        - oauth2: [uid]
+      responses:
+        "200":
+          description: Return team stats
+          schema:
+            $ref: "#/definitions/TeamStatistics"
+
+  /stats/teams/{team}:
+    get:
+      summary: Get usage statistics for a team
+      description: Get usage statistics for a team
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/get-stats-per-team
+      security:
+        - oauth2: [uid]
+      parameters:
+        - name: team
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Return team stats
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/TeamStatistic"
 
 securityDefinitions:
   oauth2:
