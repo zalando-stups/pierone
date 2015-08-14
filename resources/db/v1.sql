@@ -62,3 +62,16 @@ SELECT i_parent_id AS parent
       OR t_artifact = :q
 GROUP BY name
 ORDER BY name
+
+-- name: get-image-ancestry
+  WITH RECURSIVE parents(i_id)
+    AS (VALUES (:image)
+         UNION
+        SELECT img.i_parent_id
+          FROM images img, 
+               parents p
+         WHERE img.i_id = p.i_id
+           AND img.i_accepted = TRUE)
+SELECT i_id AS id
+  FROM parents
+ WHERE i_id IS NOT NULL

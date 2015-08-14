@@ -233,18 +233,9 @@
 
 (defn get-image-ancestry
   "Returns the whole ancestry of an image."
-  [{:keys [image]} request db _]
-  ; TODO solve recursion in postgresql (http://www.postgresql.org/docs/9.4/static/queries-with.html)
-  (let [f (fn [images image]
-            (let [result (sql/cmd-get-image-parent {:image image} {:connection db})
-                  exists? (first result)
-                  parent (:parent exists?)]
-              (if exists?
-                (if parent
-                  (recur (conj images image) parent)
-                  (conj images image))
-                [])))
-        ancestry (f [] image)]
+  [params request db _]
+  (let [ancestry (map :id
+                      (sql/cmd-get-image-ancestry params {:connection db}))]
     (if (empty? ancestry)
       (resp "image not found" request :status 404)
       (resp ancestry request))))
