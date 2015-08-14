@@ -9,6 +9,10 @@ addons:
 before_script:
   - psql -c 'CREATE DATABASE pierone;' -U postgres
 
+script:
+  - lein clean
+  - lein test
+
 after_script:
   - bash -ex coveralls.sh
 
