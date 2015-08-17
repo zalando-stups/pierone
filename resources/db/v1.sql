@@ -65,14 +65,15 @@ GROUP BY name
 ORDER BY name
 
 -- name: get-image-ancestry
-  WITH RECURSIVE parents(i_id)
-    AS (VALUES (:image)
-         UNION
-        SELECT img.i_parent_id
-          FROM images img, 
-               parents p
-         WHERE img.i_id = p.i_id
-           AND img.i_accepted = TRUE)
-SELECT i_id AS id
-  FROM parents
- WHERE i_id IS NOT NULL
+    WITH RECURSIVE parent(i_id) AS (
+  SELECT i_parent_id
+    FROM zp_data.images i
+   WHERE i.i_id = :image
+   UNION
+  SELECT img.i_id
+    FROM (SELECT *
+            FROM zp_data.images inside
+           WHERE inside.i_id = i_id
+                 AND inside.i_accepted IS TRUE) AS img)
+  SELECT i_id AS id
+    FROM parent;
