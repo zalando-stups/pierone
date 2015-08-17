@@ -86,6 +86,7 @@
         storage (->> all-images
                      (filter #(contains? images (:id %)))
                      (map :size)
+                     (filter number?)
                      (apply +))]
     {:images (count images)
      :storage storage
