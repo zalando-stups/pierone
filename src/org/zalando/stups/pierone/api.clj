@@ -70,13 +70,14 @@
 
 (defn load-stats
   "Loads usage statistics for a single team"
-  [team db]
+  [team images db]
   (let [conn {:connection db}
         artifacts (map :artifact
                        (sql/cmd-list-artifacts {:team team} conn))
         tags (apply #(sql/cmd-list-tags {:team team :artifact %} conn)
                     artifacts)
-        all-images (sql/cmd-list-images nil conn)
+        all-images (or images
+                       (sql/cmd-list-images nil conn))
         images (->> tags
                     (map #(sql/cmd-get-image-ancestry % conn))
                     (flatten)
@@ -95,7 +96,8 @@
   "Returns statistics for a single team"
   [{:keys [team]} _ db _]
   (let [conn {:connection db}
-        result (load-stats team db)]
+        images (sql/cmd-list-images nil conn)
+        result (load-stats team images db)]
     (-> result
         (ring/response)
         (fring/content-type-json))))
@@ -105,8 +107,11 @@
   [_ _ db _]
   (let [conn {:connection db}
         teams (map :team (sql/cmd-list-teams nil conn))
+        images (sql/cmd-list-images nil conn)
         result (map #(assoc {} :team %
-                               :stats (load-stats % db))
+                               :stats (load-stats %
+                                                  images
+                                                  db))
                     teams)]
     (-> result
         (ring/response)
