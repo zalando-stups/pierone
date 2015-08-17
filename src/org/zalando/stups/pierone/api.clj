@@ -74,8 +74,9 @@
   (let [conn {:connection db}
         artifacts (map :artifact
                        (sql/cmd-list-artifacts {:team team} conn))
-        tags (apply #(sql/cmd-list-tags {:team team :artifact %} conn)
-                    artifacts)
+        tags (->> artifacts
+                  (map #(sql/cmd-list-tags {:team team :artifact %} conn))
+                  (flatten))
         all-images (or images
                        (sql/cmd-list-images nil conn))
         images (->> tags
