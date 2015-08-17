@@ -208,16 +208,20 @@
 (defn put-image-binary
   "Stores an image's binary data. Second call in upload sequence."
   [{:keys [image data]} request db storage]
-  (let [^File tmp-file (io/file (:directory storage) (str image ".tmp-" (UUID/randomUUID)))]
+  (let [^File tmp-file (io/file (:directory storage)
+                                (str image ".tmp-" (UUID/randomUUID)))
+        connection {:connection db}]
     (io/copy data tmp-file)
     (store-image storage image tmp-file)
     (when-let [scm-source (get-scm-source-data tmp-file)]
       (log/info "Found scm-source.json in image %s: %s" image scm-source)
-      (sql/cmd-create-scm-source-data! (assoc scm-source :image image) {:connection db}))
-    (io/delete-file tmp-file true))
-  (sql/cmd-accept-image! {:image image} {:connection db})
-  (log/info "Stored new image %s." image)
-  (resp "OK" request))
+      (sql/cmd-create-scm-source-data! (assoc scm-source :image image) connection))
+    (sql/cmd-accept-image! {:image image
+                            :size (.length tmp-file)}
+                           connection)
+    (log/info "Stored new image %s." image)
+    (io/delete-file tmp-file true)
+    (resp "OK" request)))
 
 (defn get-image-binary
   "Reads the binary data of an image."
@@ -233,18 +237,9 @@
 
 (defn get-image-ancestry
   "Returns the whole ancestry of an image."
-  [{:keys [image]} request db _]
-  ; TODO solve recursion in postgresql (http://www.postgresql.org/docs/9.4/static/queries-with.html)
-  (let [f (fn [images image]
-            (let [result (sql/cmd-get-image-parent {:image image} {:connection db})
-                  exists? (first result)
-                  parent (:parent exists?)]
-              (if exists?
-                (if parent
-                  (recur (conj images image) parent)
-                  (conj images image))
-                [])))
-        ancestry (f [] image)]
+  [params request db _]
+  (let [ancestry (map :id
+                      (sql/cmd-get-image-ancestry params {:connection db}))]
     (if (empty? ancestry)
       (resp "image not found" request :status 404)
       (resp ancestry request))))

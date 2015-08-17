@@ -12,13 +12,19 @@ SELECT t_artifact AS artifact
 -- name: list-tags
 SELECT t_name AS name,
        t_created AS created,
-       t_created_by AS created_by
+       t_created_by AS created_by,
+       t_image_id AS image
   FROM tags
  WHERE t_team = :team
    AND t_artifact = :artifact;
 
+-- name: list-images
+SELECT i_id AS id,
+       i_size AS size
+  FROM images;
+
 -- name: get-images
-SELECT i_id as id
+SELECT i_id AS id
   FROM images
  WHERE i_id LIKE (:image || '%');
 
