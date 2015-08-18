@@ -1,8 +1,9 @@
 (ns org.zalando.stups.pierone.api
   (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
+            [org.zalando.stups.friboo.log :as log]
+            [org.zalando.stups.friboo.ring :as fring]
             [org.zalando.stups.pierone.sql :as sql]
             [ring.util.response :as ring]
-            [org.zalando.stups.friboo.ring :as fring]
             [environ.core :refer [env]]
             [org.zalando.stups.pierone.api-v2]
             [org.zalando.stups.pierone.api-v1]))
@@ -68,37 +69,46 @@
         ;empty
         (ring/not-found nil))))
 
+(defn now [] (System/currentTimeMillis))
+
 (defn load-stats
   "Loads usage statistics for a single team"
-  [team images db]
+  [team image-sizes db]
   (let [conn {:connection db}
         artifacts (map :artifact
                        (sql/cmd-list-artifacts {:team team} conn))
-        tags (->> artifacts
-                  (map #(sql/cmd-list-tags {:team team :artifact %} conn))
-                  (flatten))
-        all-images (or images
-                       (sql/cmd-list-images nil conn))
-        images (->> tags
-                    (map #(sql/cmd-get-image-ancestry % conn))
-                    (flatten)
-                    (map :id)
-                    (into #{}))
-        storage (->> all-images
-                     (filter #(contains? images (:id %)))
-                     (map :size)
-                     (filter number?)
-                     (apply +))]
-    {:images (count images)
-     :storage storage
-     :artifacts (count artifacts)
-     :tags (count tags)}))
+        tags (reduce #(into %1 (sql/cmd-list-tags {:team team :artifact %2} conn))
+                     []
+                     artifacts)
+        time1 (now)
+        used-image-ids (reduce #(into %1
+                                     (map :id
+                                          (sql/cmd-get-image-ancestry %2 conn)))
+                               #{}
+                               tags)
+        time2 (now)
+        storage-fn (fn [sum id]
+                     (let [size (get image-sizes id)]
+                       (if (number? size)
+                           (+ sum size)
+                           sum)))
+        storage (reduce storage-fn
+                        0
+                        used-image-ids)]
+    (do
+      (log/info (str "Fetching image ancestries of " (count tags) " tags took " (- time2 time1) " ms"))
+      {:images (count used-image-ids)
+       :storage storage
+       :artifacts (count artifacts)
+       :tags (count tags)})))
 
 (defn get-stats-per-team
   "Returns statistics for a single team"
   [{:keys [team]} _ db _]
   (let [conn {:connection db}
-        images (sql/cmd-list-images nil conn)
+        images (reduce #(assoc %1 (:id %2) (:size %2))
+                       {}
+                       (sql/cmd-list-images nil conn))
         result (load-stats team images db)]
     (-> result
         (ring/response)
@@ -109,7 +119,9 @@
   [_ _ db _]
   (let [conn {:connection db}
         teams (map :team (sql/cmd-list-teams nil conn))
-        images (sql/cmd-list-images nil conn)
+        images (reduce #(assoc %1 (:id %2) (:size %2))
+                       {}
+                       (sql/cmd-list-images nil conn))
         result (map #(assoc {} :team %
                                :stats (load-stats %
                                                   images
