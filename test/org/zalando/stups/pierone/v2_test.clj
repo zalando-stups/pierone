@@ -6,8 +6,7 @@
             [com.stuartsierra.component :as component]))
 
 (deftest v2-test
-  (let [system (u/setup d/all-tags
-                        d/all-images)]
+  (let [system (u/setup)]
 
     ; v2 compatibility check
     (let [result (client/get (u/v2-url "/")

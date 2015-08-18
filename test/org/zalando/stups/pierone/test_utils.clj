@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.test :refer :all]
             [clj-http.client :as client]
+            [org.zalando.stups.pierone.test-data :as d]
             [org.zalando.stups.pierone.core :refer [run]]))
 
 (def base-url "http://localhost:8080")
@@ -55,18 +56,28 @@
   (expect-headers response)
   (:body response))
 
+(defn wipe-db
+  [system]
+  (println "Deleting all tags and images")
+  (jdbc/delete! (:db system) :tags ["t_name IS NOT NULL"])
+  (jdbc/delete! (:db system) :images ["i_id IS NOT NULL"])
+  system)
+
+(defn delete-test-data
+  [system]
+  (doseq [tag d/all-tags]
+    (jdbc/delete! (:db system) :tags ["t_team = ? AND t_artifact = ? AND t_name = ?" (:team tag) (:artifact tag) (:name tag)])
+    (println "Deleted tag" (:team tag) "/" (:artifact tag) ":" (:name tag) "from old tests if existed."))
+  (doseq [image d/all-images]
+    (jdbc/delete! (:db system) :images ["i_id = ?" (:id image)])
+    (println "Deleted image" (:id image) "from old tests if existed."))
+  system)
+
 ; setup
 (defn setup
-  "Starts Pierone. Takes tags and images and ensures they are not in the database"
-  [tags images]
-  (let [system (run {})]
-    (doseq [tag tags]
-      (jdbc/delete! (:db system) :tags ["t_team = ? AND t_artifact = ? AND t_name = ?" (:team tag) (:artifact tag) (:name tag)])
-      (println "Deleted tag" (:team tag) "/" (:artifact tag) ":" (:name tag) "from old tests if existed."))
-    (doseq [image images]
-      (jdbc/delete! (:db system) :images ["i_id = ?" (:id image)])
-      (println "Deleted image" (:id image) "from old tests if existed."))
-    system))
+  "Starts Pierone."
+  []
+  (run {}))
 
 (defn push-images
   "Pushes images and verifies"
