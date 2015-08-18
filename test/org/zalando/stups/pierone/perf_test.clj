@@ -39,7 +39,7 @@
           diff (- after before)]
       (println (str diff " ms"))
       (println (str (:body resp)))
-      (is (< diff 10000)
+      (is (< diff 2000)
           "/stats/teams takes too long")
       (u/wipe-db system)
       (component/stop system))))
