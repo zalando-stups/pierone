@@ -67,14 +67,6 @@
                                :key-fn keyword)]
       (is (= 200 (:status resp)))
       (println stats)
-      ; 3 images with 8 byte ("imgXdata") content
-      (is (= (->> d/images-hierarchy
-                  (map :data)
-                  (map count)
-                  (apply +))
-             (:storage stats)))
-      (is (= (count d/images-hierarchy)
-             (:images stats)))
       ; kio is the only artifact
       (is (= 1
              (:artifacts stats)))
@@ -91,6 +83,15 @@
       (println stats)
       (is (:team (first stats))
           (:team d/tag)))
+    
+    (let [resp (client/get (u/p1-url "/stats")
+                           (u/http-opts))
+          stats (json/read-str (:body resp)
+                               :key-fn keyword)]
+      (is (= 200 (:status resp)))
+      (println stats)
+      (is (= 1 (:teams stats)))
+      (is (= 24 (:storage stats))))
 
     ; stop
     (component/stop system)))
