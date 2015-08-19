@@ -7,11 +7,11 @@
             [com.stuartsierra.component :as component]))
 
 (deftest pierone-test
-  (let [system (u/setup d/all-tags
-                        d/all-images)
+  (let [system (u/setup)
         root (first d/images-hierarchy)
         alt (second d/images-hierarchy)]
 
+    (u/delete-test-data system)
     (u/push-images d/images-hierarchy)
 
     ; tag root image as regular tag

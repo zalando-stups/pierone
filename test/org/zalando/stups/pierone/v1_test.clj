@@ -8,9 +8,10 @@
             [com.stuartsierra.component :as component]))
 
 (deftest v1-test
-  (let [system (u/setup d/all-tags
-                        d/all-images)]
+  (let [system (u/setup)]
 
+    (u/delete-test-data system)
+    
     ; ping
     (u/expect 200 (client/get (u/v1-url "/_ping")
                               (u/http-opts)))

@@ -1,4 +1,4 @@
-(defproject org.zalando.stups/pierone "0.22.0"
+(defproject org.zalando.stups/pierone "0.23.0-SNAPSHOT"
   :description "Pier One Docker Registry"
   :url "https://github.com/zalando-stups/pierone"
   :license {:name "Apache License"
@@ -45,6 +45,7 @@
   :profiles {:uberjar {:aot :all}
 
              :test    {:dependencies [[clj-http "2.0.0"]
+                                      [digest "1.4.4"]
                                       [org.clojure/java.jdbc "0.3.7"]]}
 
              :dev     {:repl-options {:init-ns user}
