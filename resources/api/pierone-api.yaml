@@ -56,13 +56,9 @@ definitions:
   TeamStatistic:
     type: object
     properties:
-      images:
-        type: integer
       artifacts:
         type: integer
       tags:
-        type: integer
-      storage:
         type: integer
   TeamStatistics:
     type: object
@@ -72,6 +68,13 @@ definitions:
         example: stups
       stats:
         $ref: "#/definitions/TeamStatistic"
+  OverallStatistics:
+    type: object
+    properties:
+      teams:
+        type: integer
+      storage:
+        type: integer
 
 paths:
 
@@ -566,13 +569,28 @@ paths:
           description: Prefix does not match any image id
         "412":
           description: Prefix matches more than one image id
-  /stats/teams:
+  /stats:
     get:
-      summary: Get usage statistics for all teams
-      description: Get usage statistics for all teams
+      summary: Get usage statistics independent of teams
+      description: Get usage statistics independent of teams
       tags:
         - Pier One API
-      operationId: org.zalando.stups.pierone.api/get-stats
+      operationId: org.zalando.stups.pierone.api/get-overall-stats
+      security:
+        - oauth2: [uid]
+      responses:
+        "200":
+          description: Return stats
+          schema:
+            $ref: "#/definitions/OverallStatistics"
+
+  /stats/teams:
+    get:
+      summary: Get statistics for all teams
+      description: Get statistics for all teams
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/get-teams-stats
       security:
         - oauth2: [uid]
       responses:
@@ -587,7 +605,7 @@ paths:
       description: Get usage statistics for a team
       tags:
         - Pier One API
-      operationId: org.zalando.stups.pierone.api/get-stats-per-team
+      operationId: org.zalando.stups.pierone.api/get-team-stats
       security:
         - oauth2: [uid]
       parameters:

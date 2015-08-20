@@ -55,3 +55,8 @@ SELECT ssd_url AS url,
  WHERE t_team = :team
    AND t_artifact = :artifact
    AND t_name = :tag;
+
+-- name: get-total-storage
+SELECT SUM(i_size) AS total
+  FROM images
+ WHERE i_accepted IS TRUE;

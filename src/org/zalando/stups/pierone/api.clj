@@ -73,61 +73,44 @@
 
 (defn load-stats
   "Loads usage statistics for a single team"
-  [team image-sizes db]
+  [team db]
   (let [conn {:connection db}
         artifacts (map :artifact
                        (sql/cmd-list-artifacts {:team team} conn))
         tags (reduce #(into %1 (sql/cmd-list-tags {:team team :artifact %2} conn))
                      []
-                     artifacts)
-        time1 (now)
-        used-image-ids (reduce #(into %1
-                                     (map :id
-                                          (sql/cmd-get-image-ancestry %2 conn)))
-                               #{}
-                               tags)
-        time2 (now)
-        storage-fn (fn [sum id]
-                     (let [size (get image-sizes id)]
-                       (if (number? size)
-                           (+ sum size)
-                           sum)))
-        storage (reduce storage-fn
-                        0
-                        used-image-ids)]
-    (do
-      (log/info (str "Fetching image ancestries of " (count tags) " tags took " (- time2 time1) " ms"))
-      {:images (count used-image-ids)
-       :storage storage
-       :artifacts (count artifacts)
-       :tags (count tags)})))
+                     artifacts)]
+    {:artifacts (count artifacts)
+     :tags (count tags)}))
 
-(defn get-stats-per-team
+(defn get-team-stats
   "Returns statistics for a single team"
   [{:keys [team]} _ db _]
   (let [conn {:connection db}
-        images (reduce #(assoc %1 (:id %2) (:size %2))
-                       {}
-                       (sql/cmd-list-images nil conn))
-        result (load-stats team images db)]
+        result (load-stats team db)]
     (-> result
         (ring/response)
         (fring/content-type-json))))
 
-(defn get-stats
+(defn get-teams-stats
   "Returns statistics for all teams that have an artifact"
   [_ _ db _]
   (let [conn {:connection db}
         teams (map :team (sql/cmd-list-teams nil conn))
-        images (reduce #(assoc %1 (:id %2) (:size %2))
-                       {}
-                       (sql/cmd-list-images nil conn))
         result (map #(assoc {} :team %
-                               :stats (load-stats %
-                                                  images
-                                                  db))
+                               :stats (load-stats % db))
                     teams)]
     (-> result
         (ring/response)
         (fring/content-type-json))))
-    
+
+(defn get-overall-stats
+  [_ _ db _]
+  (let [conn {:connection db}
+        teams (count (sql/cmd-list-teams nil conn))
+        storage (:total (first (sql/cmd-get-total-storage nil conn)))
+        result {:teams teams
+                :storage storage}]
+    (-> result
+        (ring/response)
+        (fring/content-type-json))))
