@@ -139,26 +139,27 @@
                                                      "/" (:artifact d/tag)
                                                      "/tags")
                                            (u/http-opts)))
-            result (json/read-str resp)]
+            result (json/read-str resp)
+            tags-in-result (set (map first result))]
         ; contains the test tag, snapshot tag and virtual "latest" tag
         (is (= (count result)
                3))
-
-        (let [[latest-tag latest-image] (first result)
-              [snapshot-tag snapshot-image] (second result)
-              [real-tag real-image] (last result)]
-          (is (= real-tag
-                 (:name d/tag)))
-          (is (= real-image
-                 (:id root)))
-          (is (= snapshot-tag
-                 (:name d/snapshot-tag)))
-          (is (= snapshot-image
+        (is (contains? tags-in-result
+                       (:name d/tag)))
+        (is (contains? tags-in-result
+                       (:name d/snapshot-tag)))
+        (is (contains? tags-in-result
+                       "latest"))
+        ; check that they are associated with correct image
+        (let [snapshot (first (filter #(= (:name d/snapshot-tag) (first %)) result))
+              latest (first (filter #(= "latest" (first %)) result))
+              real (first (filter #(= (:name d/tag) (first %)) result))]
+          (is (= (second snapshot)
                  (:id alternative)))
-          (is (= latest-tag
-                 "latest"))
-          (is (= latest-image
-                 snapshot-image))))
+          (is (= (second real)
+                 (:id root)))
+          (is (= (second snapshot)
+                 (second latest)))))
 
       ; check get image for single tag
       (is (= (u/wrap-quotes (:id root))
