@@ -6,10 +6,9 @@
   :scm {:url "git@github.com:zalando-stups/pierone"}
   :min-lein-version "2.0.0"
 
-  :dependencies [[org.zalando.stups/friboo "0.32.0"
-                  :exclusions [clj-time]]
-                 [yesql "0.5.0-rc3"]
-                 [clj-time "0.10.0"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
+                 [org.zalando.stups/friboo "1.0.0"]
+                 [yesql "0.5.0"]
 
                  [org.apache.commons/commons-compress "1.9"]
                  [org.clojure/data.codec "0.1.0"]
@@ -19,7 +18,7 @@
   :main ^:skip-aot org.zalando.stups.pierone.core
   :uberjar-name "pierone.jar"
 
-  :plugins [[lein-cloverage "1.0.3"]
+  :plugins [[lein-cloverage "1.0.6"]
             [io.sarnowski/lein-docker "1.1.0"]
             [org.zalando.stups/lein-scm-source "0.2.0"]]
 
