@@ -17,14 +17,15 @@ Development
 
 The service is written in Clojure. You need Leiningen_ installed to build or develop.
 
-To start a web server for the application, run:
+To start a web server for the application, you need a running PostgreSQL instance on localhost (postgres/postgres as user/pass).
+Run the development web server with:
 
 .. code-block:: bash
 
     $ lein repl
     (go)
 
-The web server will run on port 8080.
+The web server will run on port 8080. You can find the Swagger UI on http://localhost:8080/ui/.
 
 Testing
 =======
