@@ -8,31 +8,24 @@
             [org.zalando.stups.pierone.storage :as storage])
   (:gen-class))
 
-(defn new-system [configuration storage-engine]
-  (system-map
-
-    :storage (storage-engine {:configuration (:storage configuration)})
-
-    :db (sql/map->DB {:configuration (:db configuration)})
-
-    :api (using
-           (api/map->API {:configuration (:http configuration)})
-           [:storage :db])))
-
 (defn run
   "Initializes and starts the whole system."
   [default-configuration]
   (System/setProperty "hystrix.command.default.execution.timeout.enabled" "false")
   (let [configuration (config/load-configuration
-                        [:storage :db :http]
+                        (system/default-http-namespaces-and :storage :db)
                         [api/default-http-configuration
                          sql/default-db-configuration
                          storage/default-storage-configuration
                          default-configuration])
         storage-engine (if (contains? (:storage configuration) :s3-bucket)
-                         storage/map->S3Storage
-                         storage/map->LocalStorage)
-        system (new-system configuration storage-engine)]
+                           storage/map->S3Storage
+                           storage/map->LocalStorage)
+        system (system/http-system-map configuration
+                                       api/map->API
+                                       [:storage :db]
+                                       :storage (storage-engine {:configuration (:storage configuration)})
+                                       :db      (sql/map->DB {:configuration (:db configuration)}))]
     (system/run configuration system)))
 
 (defn -main
