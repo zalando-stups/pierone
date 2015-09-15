@@ -7,13 +7,13 @@
   :min-lein-version "2.0.0"
 
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.zalando.stups/friboo "1.1.3"]
+                 [org.zalando.stups/friboo "1.2.0"]
                  [yesql "0.5.0"]
 
-                 [org.apache.commons/commons-compress "1.9"]
+                 [org.apache.commons/commons-compress "1.10"]
                  [org.clojure/data.codec "0.1.0"]
 
-                 [amazonica "0.3.24"]]
+                 [amazonica "0.3.33"]]
 
   :main ^:skip-aot org.zalando.stups.pierone.core
   :uberjar-name "pierone.jar"
@@ -45,11 +45,11 @@
 
              :test    {:dependencies [[clj-http "2.0.0"]
                                       [digest "1.4.4"]
-                                      [org.clojure/java.jdbc "0.3.7"]]}
+                                      [org.clojure/java.jdbc "0.4.1"]]}
 
              :dev     {:repl-options {:init-ns user}
                        :source-paths ["dev"]
                        :dependencies [[org.clojure/tools.namespace "0.2.10"]
                                       [org.clojure/java.classpath "0.2.2"]
                                       [clj-http "2.0.0"]
-                                      [org.clojure/java.jdbc "0.3.7"]]}})
+                                      [org.clojure/java.jdbc "0.4.1"]]}})

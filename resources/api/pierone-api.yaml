@@ -78,6 +78,16 @@ definitions:
 
 paths:
 
+  '/':
+    get:
+      summary: Application root
+      operationId: org.zalando.stups.friboo.system.http/redirect-to-swagger-ui
+      security:
+        - oauth2: [uid]
+      responses:
+        default:
+          description: "Redirects to /ui/"
+
   ## Docker Registry API v2
 
   /v2/:
