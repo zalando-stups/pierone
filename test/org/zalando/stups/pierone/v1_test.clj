@@ -11,7 +11,7 @@
   (let [system (u/setup)]
 
     (u/delete-test-data system)
-    
+
     ; ping
     (u/expect 200 (client/get (u/v1-url "/_ping")
                               (u/http-opts)))
@@ -133,6 +133,10 @@
                                       "/tags/" (:name d/latest-tag))
                             (u/http-opts (u/wrap-quotes (:id alternative))
                                          :json)))
+      ; empty list of tags -> 404
+      (u/expect 404 (client/get (u/v1-url "/repositories/" (:team d/tag)
+                                                     "/non-existing"
+                                                     "/tags")))
 
       ; check tag list for existing artifact -> ok
       (let [resp (u/expect 200 (client/get (u/v1-url "/repositories/" (:team d/tag)
