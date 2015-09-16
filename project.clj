@@ -7,7 +7,7 @@
   :min-lein-version "2.0.0"
 
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.zalando.stups/friboo "1.2.0"]
+                 [org.zalando.stups/friboo "1.3.0"]
                  [yesql "0.5.0"]
 
                  [org.apache.commons/commons-compress "1.10"]
