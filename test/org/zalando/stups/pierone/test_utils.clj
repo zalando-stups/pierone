@@ -32,7 +32,7 @@
         default
         (assoc default :body body
                        :content-type content))))
-          
+
 
 (defn wrap-quotes [string]
   (str "\"" string "\""))

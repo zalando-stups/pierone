@@ -135,8 +135,9 @@
                                          :json)))
       ; empty list of tags -> 404
       (u/expect 404 (client/get (u/v1-url "/repositories/" (:team d/tag)
-                                                     "/non-existing"
-                                                     "/tags")))
+                                          "/non-existing"
+                                          "/tags")
+                                (u/http-opts)))
 
       ; check tag list for existing artifact -> ok
       (let [resp (u/expect 200 (client/get (u/v1-url "/repositories/" (:team d/tag)

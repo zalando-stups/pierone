@@ -32,9 +32,8 @@
 
   (read-data [_ image]
     (let [^File file (io/file directory image)]
-      (if (.exists file)
-        (io/input-stream file)
-        nil)))
+      (when (.exists file)
+            (io/input-stream file))))
 
   (write-data [_ image data]
     (let [^File file (io/file directory image)
