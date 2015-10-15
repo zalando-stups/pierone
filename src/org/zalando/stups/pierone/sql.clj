@@ -10,7 +10,7 @@
    :db-subname "//localhost:5432/pierone"
    :db-user "postgres"
    :db-password "postgres"
-   :db-init-sql "SET search_path TO zp_data"})
+   :db-init-sql "SET statement_timeout TO '60s'; SET search_path TO zp_data"})
 
 (defqueries "db/pierone.sql")
 (defqueries "db/v1.sql")
