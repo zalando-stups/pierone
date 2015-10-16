@@ -36,25 +36,25 @@ SELECT t_name AS name,
  WHERE t_image_id LIKE (:image || '%');
 
 -- name: get-scm-source
-WITH RECURSIVE ancestry(id, next, path) AS (
-    SELECT i_id, i_parent_id, ARRAY[i_id]
-      FROM zp_data.images
- UNION ALL
-    SELECT id, i_parent_id, path || i_id
-      FROM zp_data.images, ancestry
-     WHERE i_id = next
-      AND next IS NOT NULL)
+WITH RECURSIVE parents(i_id)
+    AS (SELECT t_image_id
+          FROM tags
+         WHERE t_team = :team
+           AND t_artifact = :artifact
+           AND t_name = :tag
+         UNION
+        SELECT img.i_parent_id
+          FROM images img,
+               parents p
+         WHERE img.i_id = p.i_id
+           AND img.i_accepted = TRUE)
 SELECT ssd_url AS url,
        ssd_revision AS revision,
        ssd_author AS author,
        ssd_status AS status,
        ssd_created AS created
-  FROM tags
-  JOIN scm_source_data
-    ON ssd_image_id = ANY((SELECT MAX(path) FROM ancestry WHERE id = t_image_id AND next IS NULL)::text[])
- WHERE t_team = :team
-   AND t_artifact = :artifact
-   AND t_name = :tag;
+  FROM parents
+  JOIN scm_source_data ON ssd_image_id = i_id;
 
 -- name: get-total-storage
 SELECT SUM(i_size) AS total
