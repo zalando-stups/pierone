@@ -136,6 +136,8 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/post-upload
+      security:
+        - oauth2: [uid]
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
@@ -148,6 +150,8 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/patch-upload
+      security:
+        - oauth2: [uid]
       consumes:
         - application/octet-stream
       parameters:
@@ -166,6 +170,8 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/put-upload
+      security:
+        - oauth2: [uid]
       consumes:
         - application/octet-stream
       parameters:
@@ -188,6 +194,8 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/head-blob
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
@@ -200,6 +208,8 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/get-blob
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
@@ -213,6 +223,8 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/put-manifest
+      security:
+        - oauth2: [uid]
       consumes:
         - application/octet-stream # Docker sucks
         - application/json
@@ -232,6 +244,8 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/get-manifest
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
