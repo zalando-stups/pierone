@@ -48,6 +48,11 @@
   "Checks for compatibility with version 2."
   [_ _ _ _]
   (-> (ring/response "OK")
+      ; TODO: validate OAuth token here to return 200 when the token was provided
+      (ring/status 401)
+      (ring/header "WWW-Authenticate" "Basic realm=\"Pier One Docker Registry\"")
+      ; IMPORTANT: we need to set the V2 header here (even for 401 status code!),
+      ; otherwise the Docker client will fallback to V1
       (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
 
 (defn post-upload
