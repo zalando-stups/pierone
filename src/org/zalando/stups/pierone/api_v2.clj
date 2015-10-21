@@ -121,18 +121,19 @@
                           :artifact artifact
                           :name name
                           :image digest
+                          :manifest (json/write-str metadata)
                           :user uid}]
     (if (= "latest" name)
       (resp "tag latest is not allowed" request :status 409)
       (try
-        (sql/create-tag! params-with-user connection)
+        (sql/create-manifest! params-with-user connection)
         (log/info "Stored new tag %s." params-with-user)
         (resp "OK" request)
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
           (if (.endsWith name "-SNAPSHOT")
-            (let [updated-rows (sql/cmd-update-tag! params-with-user connection)]
+            (let [updated-rows (sql/update-manifest! params-with-user connection)]
               (if (pos? updated-rows)
                 (do
                   (log/info "Updated snapshot tag %s." params-with-user)
@@ -146,7 +147,8 @@
 
 (defn get-manifest
   "get"
-  [{:keys [team artifact name]} request db _]
-  ; TODO
-  nil)
+  [parameters request db _]
+  (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
+    (resp manifest request)
+    (resp "manifest not found" request :status 404)))
 
