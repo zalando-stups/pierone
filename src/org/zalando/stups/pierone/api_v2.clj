@@ -1,5 +1,5 @@
 (ns org.zalando.stups.pierone.api-v2
-  (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
+  (:require [org.zalando.stups.friboo.system.http :refer [def-http-component resolve-access-token]]
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.user :as u]
             [clojure.data.json :as json]
@@ -44,16 +44,42 @@
             [storage image]
             (s/read-data storage image))
 
+(defn ping-unauthorized []
+    (-> (ring/response "Unauthorized")
+        (ring/status 401)
+        (ring/header "WWW-Authenticate" "Basic realm=\"Pier One Docker Registry\"")
+        ; IMPORTANT: we need to set the V2 header here (even for 401 status code!),
+        ; otherwise the Docker client will fallback to V1
+        (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
+
+(defn ping-ok []
+    (-> (ring/response "OK")
+        (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
+
+; TODO: this function was copied from Swagger1st library
+; because the function is not public there :-(
+(defn extract-access-token
+  "Extracts the bearer token from the Authorization header."
+  [request]
+  (if-let [authorization (get-in request [:headers "authorization"])]
+    (when (.startsWith authorization "Bearer ")
+      (.substring authorization (count "Bearer ")))))
+
 (defn ping
   "Checks for compatibility with version 2."
-  [_ _ _ _]
-  (-> (ring/response "OK")
-      ; TODO: validate OAuth token here to return 200 when the token was provided
-      (ring/status 401)
-      (ring/header "WWW-Authenticate" "Basic realm=\"Pier One Docker Registry\"")
-      ; IMPORTANT: we need to set the V2 header here (even for 401 status code!),
-      ; otherwise the Docker client will fallback to V1
-      (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
+  [_ request _ _]
+  ; NOTE: we are doing our own OAuth check here as Docker requires an extra V2 header set
+  (let [tokeninfo-url (:tokeninfo-url (:configuration request))]
+       (if tokeninfo-url
+           (if-let [access-token (extract-access-token request)]
+                   ; check access token
+                   (if-let [tokeninfo (resolve-access-token tokeninfo-url access-token)]
+                           (ping-ok)
+                           (ping-unauthorized))
+                   ; missing access token
+                   (ping-unauthorized))
+           ; no tokeninfo URL => no security checks
+           (ping-ok))))
 
 (defn post-upload
   ""
@@ -65,12 +91,16 @@
            (ring/header "Location" (str "/v2/" team "/" artifact "/blobs/uploads/" uuid))
            (ring/header "Docker-Upload-UUID" uuid))))
 
+(defn get-upload-file [storage team artifact uuid]
+  (let [^File dir (io/file (:directory storage) "uploads" team artifact)]
+    (.mkdirs dir)
+    (io/file dir (str uuid ".upload-blob"))))
+
 (defn patch-upload
-  ""
+  "Upload FS layer blob"
   [{:keys [team artifact uuid data]} request db storage]
   (require-write-access team request)
-  (let [^File upload-file (io/file (:directory storage)
-                                   (str "upload-" uuid))]
+  (let [^File upload-file (get-upload-file storage team artifact uuid)]
        (io/copy data upload-file)
        (-> (ring/response "")
            (ring/status 202)
@@ -79,13 +109,14 @@
            (ring/header "Range" (str "0-" (- (.length upload-file) 1))))))
 
 (defn put-upload
-  ""
+  "Commit FS layer blob"
   [{:keys [team artifact uuid digest data]} request db storage]
   (require-write-access team request)
-  (let [^File upload-file (io/file (:directory storage)
-                                   (str "upload-" uuid))]
-
-       (io/copy data upload-file)
+  (let [^File upload-file (get-upload-file storage team artifact uuid)
+              size        (.length upload-file)
+        image-ident (str team "/" artifact "/" digest)]
+       (when (zero? size)
+             (io/copy data upload-file))
        (store-image storage digest upload-file)
        (sql/create-image!
         {:image    digest
@@ -93,14 +124,14 @@
          :parent   nil
          :user     (get-in request [:tokeninfo "uid"])}
         {:connection db})
-       (sql/accept-image! {:image digest :size (.length upload-file)} {:connection db})
-       (log/info "Stored new image %s." digest)
+       (sql/accept-image! {:image digest :size size} {:connection db})
+       (log/info "Stored new image %s." image-ident)
        (io/delete-file upload-file true)
        (-> (ring/response "")
            (ring/status 201))))
 
 (defn head-blob
-  "Reads the binary data of an image."
+  "Check whether image (FS layer) exists."
   [{:keys [digest]} request db _]
   (if (seq (sql/get-image-metadata {:image digest} {:connection db}))
     (resp "OK" request)
@@ -127,12 +158,13 @@
                           :name name
                           :image digest
                           :manifest (json/write-str metadata)
-                          :user uid}]
+                          :user uid}
+        tag-ident (str team "/" artifact ":" name)]
     (if (= "latest" name)
       (resp "tag latest is not allowed" request :status 409)
       (try
         (sql/create-manifest! params-with-user connection)
-        (log/info "Stored new tag %s." params-with-user)
+        (log/info "Stored new tag %s." tag-ident)
         (resp "OK" request)
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
@@ -141,13 +173,13 @@
             (let [updated-rows (sql/update-manifest! params-with-user connection)]
               (if (pos? updated-rows)
                 (do
-                  (log/info "Updated snapshot tag %s." params-with-user)
+                  (log/info "Updated snapshot tag %s." tag-ident)
                   (resp "OK" request))
                 (do
-                  (log/info "Did not update snapshot tag %s because image is the same." params-with-user)
+                  (log/info "Did not update snapshot tag %s because image is the same." tag-ident)
                   (resp "tag not modified" request))))
             (do
-              (log/warn "Prevented update of tag: %s" (str e))
+              (log/warn "Prevented update of tag %s: %s" tag-ident (str e))
               (resp {:errors [{:code "TAG_INVALID" :message "tag already exists"}]} request :status 409))))))))
 
 (defn get-manifest

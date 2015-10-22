@@ -132,7 +132,7 @@ paths:
           description: v2 is available
   /v2/{team}/{artifact}/blobs/uploads/:
     post:
-      summary: upload
+      summary: start upload
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/post-upload
@@ -146,7 +146,7 @@ paths:
           description: upload accepted
   /v2/{team}/{artifact}/blobs/uploads/{uuid}:
     patch:
-      summary: upload
+      summary: upload FS layer blob
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/patch-upload
@@ -180,6 +180,7 @@ paths:
         - $ref: '#/parameters/uuid'
         - name: digest
           in: query
+          type: string
           required: true
         - name: data
           in: body
@@ -203,6 +204,8 @@ paths:
       responses:
         "200":
           description: exists
+        "404":
+          description: FS layer blob does not exist
     get:
       summary: get layer
       tags:
