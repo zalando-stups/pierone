@@ -54,7 +54,21 @@ SELECT ssd_url AS url,
        ssd_status AS status,
        ssd_created AS created
   FROM parents
-  JOIN scm_source_data ON ssd_image_id = i_id;
+  JOIN scm_source_data ON ssd_image_id = i_id
+UNION
+-- v2: manifest with FS layer references
+SELECT ssd_url AS url,
+       ssd_revision AS revision,
+       ssd_author AS author,
+       ssd_status AS status,
+       ssd_created AS created
+  FROM tags
+  JOIN scm_source_data ON ssd_image_id = ANY(t_fs_layers)
+ WHERE t_team = :team
+   AND t_artifact = :artifact
+   AND t_name = :tag
+ORDER BY created DESC
+ LIMIT 1;
 
 -- name: get-total-storage
 SELECT SUM(i_size) AS total

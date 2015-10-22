@@ -2,6 +2,7 @@
   (:require [org.zalando.stups.friboo.system.http :refer [def-http-component resolve-access-token]]
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.user :as u]
+            [org.zalando.stups.pierone.api-v1 :as v1]
             [clojure.data.json :as json]
             [ring.util.response :as ring]
             [org.zalando.stups.pierone.sql :as sql]
@@ -117,13 +118,21 @@
         image-ident (str team "/" artifact "/" digest)]
        (when (zero? size)
              (io/copy data upload-file))
+       (try
+            (sql/create-image!
+             {:image    digest
+              :metadata ""
+              :parent   nil
+              :user     (get-in request [:tokeninfo "uid"])}
+             {:connection db})
+            (catch SQLException e
+                   (if (seq (sql/get-image-metadata {:image digest} {:connection db}))
+                       (log/info "Image already exists: %s" image-ident)
+                       (throw e))))
        (store-image storage digest upload-file)
-       (sql/create-image!
-        {:image    digest
-         :metadata ""
-         :parent   nil
-         :user     (get-in request [:tokeninfo "uid"])}
-        {:connection db})
+       (when-let [scm-source (v1/get-scm-source-data upload-file)]
+                 (log/info "Found scm-source.json in image %s: %s" image-ident scm-source)
+                 (sql/cmd-create-scm-source-data! (assoc scm-source :image digest) {:connection db}))
        (sql/accept-image! {:image digest :size size} {:connection db})
        (log/info "Stored new image %s." image-ident)
        (io/delete-file upload-file true)
@@ -151,13 +160,14 @@
   (let [metadata (json/read-str (slurp data))
         connection {:connection db}
         uid (get-in request [:tokeninfo "uid"])
-        ; TODO
-        digest (get (first (get metadata "fsLayers")) "blobSum")
+        fs-layers (map #(get % "blobSum") (get metadata "fsLayers"))
+        digest (first fs-layers)
         params-with-user {:team team
                           :artifact artifact
                           :name name
                           :image digest
                           :manifest (json/write-str metadata)
+                          :fs_layers fs-layers
                           :user uid}
         tag-ident (str team "/" artifact ":" name)]
     (if (= "latest" name)
