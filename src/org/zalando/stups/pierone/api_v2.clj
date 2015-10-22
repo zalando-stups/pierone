@@ -12,7 +12,8 @@
             [org.zalando.stups.pierone.storage :as s])
   (:import (java.sql SQLException)
            (java.util UUID)
-           (java.io FileInputStream File)))
+           (java.io FileInputStream File)
+           (java.security MessageDigest)))
 
 (defn require-write-access
   "Require write access to team repository"
@@ -97,32 +98,28 @@
     (.mkdirs dir)
     (io/file dir (str uuid ".upload-blob"))))
 
-(defn patch-upload
-  "Upload FS layer blob"
-  [{:keys [team artifact uuid data]} request db storage]
-  (require-write-access team request)
-  (let [^File upload-file (get-upload-file storage team artifact uuid)]
-       (io/copy data upload-file)
-       (-> (ring/response "")
-           (ring/status 202)
-           (ring/header "Docker-Upload-UUID" uuid)
-           ; is Docker really expecting an invalid Range header here?
-           (ring/header "Range" (str "0-" (- (.length upload-file) 1))))))
+(defn hexify [digest]
+  (apply str (map #(format "%02x" (bit-and % 0xff)) digest)))
 
-(defn put-upload
-  "Commit FS layer blob"
-  [{:keys [team artifact uuid digest data]} request db storage]
-  (require-write-access team request)
-  (let [^File upload-file (get-upload-file storage team artifact uuid)
-              size        (.length upload-file)
-        image-ident (str team "/" artifact "/" digest)]
-       (when (zero? size)
-             (io/copy data upload-file))
+(defn compute-digest [file]
+  (let [algorithm "SHA-256"
+        prefix (.replaceAll (.toLowerCase algorithm) "-" "")
+        bufsize 16384
+        md (MessageDigest/getInstance algorithm)]
+       (with-open [in (io/input-stream file)]
+                  (let [ba (byte-array bufsize)]
+                  (loop [n (.read in ba 0 bufsize)]
+                        (when (> n 0)
+                              (.update md ba 0 n)
+                              (recur (.read in ba 0 bufsize))))))
+       (str prefix ":" (hexify (.digest md)))))
+
+(defn create-image [team artifact digest upload-file request db storage]
+  (let [image-ident (str team "/" artifact "/" digest)]
        (try
-            (sql/create-image!
+            (sql/create-image-blob!
              {:image    digest
-              :metadata ""
-              :parent   nil
+              :size     (.length upload-file)
               :user     (get-in request [:tokeninfo "uid"])}
              {:connection db})
             (catch SQLException e
@@ -133,9 +130,33 @@
        (when-let [scm-source (v1/get-scm-source-data upload-file)]
                  (log/info "Found scm-source.json in image %s: %s" image-ident scm-source)
                  (sql/cmd-create-scm-source-data! (assoc scm-source :image digest) {:connection db}))
-       (sql/accept-image! {:image digest :size size} {:connection db})
-       (log/info "Stored new image %s." image-ident)
-       (io/delete-file upload-file true)
+       (log/info "Stored new image %s." image-ident)))
+
+(defn patch-upload
+  "Upload FS layer blob"
+  [{:keys [team artifact uuid data]} request db storage]
+  (require-write-access team request)
+  (let [^File upload-file (get-upload-file storage team artifact uuid)]
+       (io/copy data upload-file)
+       (let [digest (compute-digest upload-file)
+             size   (.length upload-file)]
+            (create-image team artifact digest upload-file request db storage)
+            (io/delete-file upload-file true)
+            (-> (ring/response "")
+                (ring/status 202)
+                (ring/header "Docker-Upload-UUID" uuid)
+                ; is Docker really expecting an invalid Range header here?
+                (ring/header "Range" (str "0-" (- size 1)))))))
+
+(defn put-upload
+  "Commit FS layer blob"
+  [{:keys [team artifact uuid digest data]} request db storage]
+  (require-write-access team request)
+  (let [^File upload-file (get-upload-file storage team artifact uuid)
+        image-ident (str team "/" artifact "/" digest)]
+       ; TODO: file might be uploaded on PUT too
+       (sql/accept-image-blob! {:image digest} {:connection db})
+       (log/info "Accepted image %s." image-ident)
        (-> (ring/response "")
            (ring/status 201))))
 

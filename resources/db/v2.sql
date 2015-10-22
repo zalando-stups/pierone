@@ -1,3 +1,13 @@
+-- name: create-image-blob!
+INSERT INTO images
+       (i_id, i_metadata, i_accepted, i_parent_id, i_size, i_created_by)
+VALUES (:image, '', FALSE, NULL, :size, :user);
+
+-- name: accept-image-blob!
+UPDATE images
+   SET i_accepted = TRUE
+ WHERE i_id = :image;
+
 -- name: create-manifest!
 INSERT INTO tags
        (t_team, t_artifact, t_name, t_manifest, t_image_id, t_fs_layers, t_created_by)
