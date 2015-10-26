@@ -18,7 +18,8 @@
         ; echo -n 'imgdata' | sha256sum
         digest "sha256:a5c741c7dea3a96944022b4b9a0b1480cfbeef5f4cc934850e8afacb48e18c5e"
         invalid-manifest (.getBytes "stuff")
-        manifest (.getBytes (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"}]}"))]
+        manifest (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"}]}")
+        manifest-bytes (.getBytes manifest)]
 
     (u/wipe-db system)
 
@@ -64,7 +65,12 @@
 
     (expect 200
             (client/put (u/v2-url "/myteam/myart/manifests/1.0")
-                        (u/http-opts (io/input-stream manifest))))
+                        (u/http-opts (io/input-stream manifest-bytes))))
+
+    (is (= manifest
+           (expect 200
+            (client/get (u/v2-url "/myteam/myart/manifests/1.0")
+                        (u/http-opts)))))
 
     ; stop
     (component/stop system)))
