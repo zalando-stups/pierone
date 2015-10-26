@@ -256,6 +256,31 @@ paths:
       responses:
         "200":
           description: OK
+  /v2/{team}/{artifact}/tags/list:
+    get:
+      summary: list tags
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/list-tags
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+      responses:
+        "200":
+          description: list of tags
+  /v2/_catalog:
+    get:
+      summary: list/browse all repositories
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/list-repositories
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+      responses:
+        "200":
+          description: list of repos
 
 
   ## Docker Registry API v1

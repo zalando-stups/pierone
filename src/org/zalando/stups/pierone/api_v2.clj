@@ -243,3 +243,15 @@
     (resp manifest request)
     (resp "manifest not found" request :status 404)))
 
+(defn list-tags
+  "get"
+  [{:keys [team artifact] :as parameters} request db _]
+  (let [tags (map :name (sql/list-tags parameters {:connection db}))]
+    (resp {:name (str team "/" artifact) :tags tags} request)))
+
+(defn list-repositories
+  "get"
+  [_ request db _]
+  (let [repos (map :name (sql/list-repositories {} {:connection db}))]
+    (resp {:repositories repos} request)))
+

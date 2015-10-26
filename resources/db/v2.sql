@@ -39,3 +39,13 @@ SELECT t_manifest AS manifest
  WHERE t_team = :team
    AND t_artifact = :artifact
    AND t_name = :name;
+
+-- name: list-tags
+SELECT t_name AS name
+  FROM tags
+ WHERE t_team = :team
+   AND t_artifact = :artifact;
+
+-- name: list-repositories
+SELECT t_team || '/' || t_artifact AS name
+  FROM tags;
