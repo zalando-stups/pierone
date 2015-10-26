@@ -270,6 +270,17 @@ paths:
       responses:
         "200":
           description: list of tags
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "myteam/myart"
+              tags:
+                type: array
+                items:
+                  type: string
+                  example: "1.0"
   /v2/_catalog:
     get:
       summary: list/browse all repositories
@@ -281,6 +292,14 @@ paths:
       responses:
         "200":
           description: list of repos
+          schema:
+            type: object
+            properties:
+              repositories:
+                type: array
+                items:
+                  type: string
+                  example: "myteam/myart"
 
 
   ## Docker Registry API v1
