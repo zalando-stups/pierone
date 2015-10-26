@@ -3,6 +3,11 @@ INSERT INTO images
        (i_id, i_metadata, i_accepted, i_parent_id, i_size, i_created_by)
 VALUES (:image, '', FALSE, NULL, :size, :user);
 
+-- name: image-blob-exists
+SELECT 1
+  FROM images
+ WHERE i_id = :image;
+
 -- name: accept-image-blob!
 UPDATE images
    SET i_accepted = TRUE

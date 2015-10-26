@@ -2,6 +2,7 @@
   (:require [org.zalando.stups.friboo.system.http :refer [def-http-component resolve-access-token]]
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.user :as u]
+            [io.sarnowski.swagger1st.util.api :as api]
             [org.zalando.stups.pierone.api-v1 :as v1]
             [clojure.data.json :as json]
             [ring.util.response :as ring]
@@ -123,7 +124,7 @@
               :user     (get-in request [:tokeninfo "uid"])}
              {:connection db})
             (catch SQLException e
-                   (if (seq (sql/get-image-metadata {:image digest} {:connection db}))
+                   (if (seq (sql/image-blob-exists {:image digest} {:connection db}))
                        (log/info "Image already exists: %s" image-ident)
                        (throw e))))
        (store-image storage digest upload-file)
@@ -155,10 +156,15 @@
   (let [^File upload-file (get-upload-file storage team artifact uuid)
         image-ident (str team "/" artifact "/" digest)]
        ; TODO: file might be uploaded on PUT too
-       (sql/accept-image-blob! {:image digest} {:connection db})
-       (log/info "Accepted image %s." image-ident)
-       (-> (ring/response "")
-           (ring/status 201))))
+
+       (let [updated-rows (sql/accept-image-blob! {:image digest} {:connection db})]
+            (if (pos? updated-rows)
+                (do
+                  (log/info "Accepted image %s." image-ident)
+                  (-> (ring/response "")
+                      (ring/status 201)))
+                (do
+                  (resp "image not found" request :status 404))))))
 
 (defn head-blob
   "Check whether image (FS layer) exists."
@@ -174,23 +180,40 @@
     (resp data request :binary? true)
     (resp "image not found" request :status 404)))
 
+(defn read-manifest
+  "Read manifest JSON and throw 'Bad Request' if invalid"
+  [data]
+  (try
+    (json/read-str (slurp data))
+    (catch Exception e
+      (api/throw-error 400 "invalid manifest JSON"))))
+
+(defn get-fs-layers
+   [manifest]
+   (map #(get % "blobSum") (get manifest "fsLayers")))
+
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
   [{:keys [team artifact name data]} request db _]
   (require-write-access team request)
-  (let [metadata (json/read-str (slurp data))
+  (let [manifest (read-manifest data)
         connection {:connection db}
         uid (get-in request [:tokeninfo "uid"])
-        fs-layers (map #(get % "blobSum") (get metadata "fsLayers"))
+        fs-layers (get-fs-layers manifest)
         digest (first fs-layers)
         params-with-user {:team team
                           :artifact artifact
                           :name name
                           :image digest
-                          :manifest (json/write-str metadata)
+                          :manifest (json/write-str manifest)
                           :fs_layers fs-layers
                           :user uid}
         tag-ident (str team "/" artifact ":" name)]
+    (when-not (seq fs-layers)
+              (api/throw-error 400 "manifest has no FS layers"))
+    (doseq [digest fs-layers]
+          (when-not (seq (sql/image-blob-exists {:image digest} {:connection db}))
+                    (api/throw-error 400 (str "image blob " digest " does not exist"))))
     (if (= "latest" name)
       (resp "tag latest is not allowed" request :status 409)
       (try
