@@ -2,19 +2,19 @@
   (:require [clojure.java.io :as io]))
 
 (def images-hierarchy
-  [{:id       "img1"
-    :metadata "{\"id\": \"img1\", \"parent\": \"img2\", \"key/with/slash\": \"test\"}"
+  [{:id       "abc1"
+    :metadata "{\"id\": \"abc1\", \"parent\": \"def2\", \"key/with/slash\": \"test\"}"
     :data     (.getBytes "img1data")}
-   {:id       "img2"
-    :metadata "{\"id\": \"img2\", \"parent\": \"img3\"}"
+   {:id       "def2"
+    :metadata "{\"id\": \"def2\", \"parent\": \"aaa3\"}"
     :data     (.getBytes "img2data")}
-   {:id       "img3"
-    :metadata "{\"id\": \"img3\"}"
+   {:id       "aaa3"
+    :metadata "{\"id\": \"aaa3\"}"
     :data     (.getBytes "img3data")}])
 
 (def image-single
-  {:id       "img4"
-   :metadata "{\"id\": \"img4\"}"
+  {:id       "fff4"
+   :metadata "{\"id\": \"fff4\"}"
    :data     (io/input-stream (.getBytes "img4data"))})
 
 (def all-images (conj images-hierarchy image-single))

@@ -82,5 +82,14 @@
             (client/get (u/v2-url "/_catalog")
                         (u/http-opts)))))
 
+    ; check that v1 API returns 404 for v2 images
+    (expect 404
+            (client/get (u/v1-url "/repositories/myteam/myart/tags/1.0")
+                        (u/http-opts)))
+
+    (expect 404
+            (client/get (u/v1-url "/images/" digest "/json")
+                        (u/http-opts)))
+
     ; stop
     (component/stop system)))

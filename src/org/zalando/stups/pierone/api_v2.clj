@@ -177,7 +177,8 @@
   "Reads the binary data of an image."
   [{:keys [digest]} request _ storage]
   (if-let [data (load-image storage digest)]
-    (resp data request :binary? true)
+    (-> (resp data request :binary? true)
+        (ring/header "Docker-Content-Digest" digest))
     (resp "image not found" request :status 404)))
 
 (defn read-manifest

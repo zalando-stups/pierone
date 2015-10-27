@@ -49,6 +49,7 @@
 
              :dev     {:repl-options {:init-ns user}
                        :source-paths ["dev"]
+                       :jvm-opts ["-Dhystrix.threadpool.default.coreSize=50"]
                        :dependencies [[org.clojure/tools.namespace "0.2.10"]
                                       [org.clojure/java.classpath "0.2.2"]
                                       [clj-http "2.0.0"]
