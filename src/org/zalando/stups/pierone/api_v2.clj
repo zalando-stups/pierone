@@ -99,6 +99,11 @@
     (.mkdirs dir)
     (io/file dir (str uuid ".upload-blob"))))
 
+(defn get-download-file [storage digest]
+  (let [^File dir (io/file (:directory storage) "downloads")]
+    (.mkdirs dir)
+    (io/file dir (str digest ".download-blob"))))
+
 (defn hexify [digest]
   (apply str (map #(format "%02x" (bit-and % 0xff)) digest)))
 
@@ -130,7 +135,11 @@
        (store-image storage digest upload-file)
        (when-let [scm-source (v1/get-scm-source-data upload-file)]
                  (log/info "Found scm-source.json in image %s: %s" image-ident scm-source)
-                 (sql/cmd-create-scm-source-data! (assoc scm-source :image digest) {:connection db}))
+                 (try
+                      (sql/create-scm-source-data! (assoc scm-source :image digest) {:connection db})
+                      (catch SQLException e
+                             (when-not (seq (sql/image-blob-exists {:image digest} {:connection db}))
+                                       (throw e)))))
        (log/info "Stored new image %s." image-ident)))
 
 (defn patch-upload
@@ -177,8 +186,13 @@
   "Reads the binary data of an image."
   [{:keys [digest]} request _ storage]
   (if-let [data (load-image storage digest)]
-    (-> (resp data request :binary? true)
-        (ring/header "Docker-Content-Digest" digest))
+    (let [^File download-file (get-download-file storage digest)]
+         (io/copy data download-file)
+         (-> (resp download-file request :binary? true)
+             (ring/header "Docker-Content-Digest" digest)
+             (ring/header "Content-Length" (.length download-file))
+             ; layers are already GZIP compressed!
+             (ring/header "Content-Encoding" "identity")))
     (resp "image not found" request :status 404)))
 
 (defn read-manifest
