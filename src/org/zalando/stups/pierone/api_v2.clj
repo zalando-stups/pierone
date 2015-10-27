@@ -178,21 +178,22 @@
 (defn head-blob
   "Check whether image (FS layer) exists."
   [{:keys [digest]} request db _]
-  (if (seq (sql/get-image-metadata {:image digest} {:connection db}))
-    (resp "OK" request)
+  (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
+    (-> (resp "OK" request)
+        (ring/header "Docker-Content-Digest" digest)
+        (ring/header "Content-Length" size))
     (resp "image not found" request :status 404)))
 
 (defn get-blob
   "Reads the binary data of an image."
-  [{:keys [digest]} request _ storage]
-  (if-let [data (load-image storage digest)]
-    (let [^File download-file (get-download-file storage digest)]
-         (io/copy data download-file)
-         (-> (resp download-file request :binary? true)
-             (ring/header "Docker-Content-Digest" digest)
-             (ring/header "Content-Length" (.length download-file))
-             ; layers are already GZIP compressed!
-             (ring/header "Content-Encoding" "identity")))
+  [{:keys [digest]} request db storage]
+  (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
+          (let [data (load-image storage digest)]
+               (-> (resp data request :binary? true)
+                   (ring/header "Docker-Content-Digest" digest)
+                   (ring/header "Content-Length" size)
+                   ; layers are already GZIP compressed!
+                   (ring/header "Content-Encoding" "identity")))
     (resp "image not found" request :status 404)))
 
 (defn read-manifest

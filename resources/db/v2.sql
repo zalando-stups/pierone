@@ -8,6 +8,11 @@ SELECT 1
   FROM images
  WHERE i_id = :image;
 
+-- name: get-blob-size
+SELECT i_size AS size
+  FROM images
+ WHERE i_id = :image;
+
 -- name: accept-image-blob!
 UPDATE images
    SET i_accepted = TRUE

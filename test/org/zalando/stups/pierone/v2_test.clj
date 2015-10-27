@@ -55,6 +55,10 @@
             (client/put (u/v2-url "/myteam/myart/blobs/uploads/myuuid")
                         (merge (u/http-opts) {:query-params {"digest" digest}})))
 
+    (expect 200
+            (client/head (u/v2-url "/myteam/myart/blobs/" digest)
+                         (u/http-opts)))
+
     (expect 404
             (client/get (u/v2-url "/myteam/myart/manifests/1.0")
                         (u/http-opts)))
