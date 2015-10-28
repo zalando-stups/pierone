@@ -3,7 +3,7 @@
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.user :as u]
             [io.sarnowski.swagger1st.util.api :as api]
-            [org.zalando.stups.pierone.api-v1 :as v1]
+            [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
             [clojure.data.json :as json]
             [ring.util.response :as ring]
             [org.zalando.stups.pierone.sql :as sql]
@@ -15,14 +15,6 @@
            (java.util UUID)
            (java.io FileInputStream File)
            (java.security MessageDigest)))
-
-(defn require-write-access
-  "Require write access to team repository"
-  [team request]
-  ; either user has write access to all (service user)
-  ; or user belongs to a team (employee user)
-  (when-not (get-in request [:tokeninfo "application.write_all"])
-    (u/require-internal-team team request)))
 
 ;; Docker Registry API v2
 ;;
