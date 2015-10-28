@@ -1,10 +1,12 @@
 (ns org.zalando.stups.pierone.api-v1
   (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
             [org.zalando.stups.friboo.log :as log]
+            [org.zalando.stups.friboo.ring :as r]
             [ring.util.response :as ring]
             [clojure.data.json :as json]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [io.sarnowski.swagger1st.util.api :as api]
             [io.sarnowski.swagger1st.util.security :as security]
             [org.zalando.stups.friboo.user :as u]
@@ -13,6 +15,9 @@
             [clj-time.coerce :as tcoerce]
             [clojure.data.codec.base64 :as b64]
             [com.netflix.hystrix.core :refer [defcommand]]
+            [clojure.core.memoize :as memo]
+            [clojure.core.cache :as cache]
+            [clj-http.client :as http]
             [org.zalando.stups.friboo.config :refer [require-config]]
             [org.zalando.stups.pierone.storage :as s])
   (:import (java.sql SQLException)
@@ -44,13 +49,44 @@
         (ring/header "X-Docker-Token" (get (:tokeninfo request) "access_token" "AnonFakeToken"))
         (ring/header "X-Docker-Endpoints" (get-in request [:headers "host"])))))
 
+
+(defcommand
+  fetch-service-team
+  [kio-url access-token user-id]
+  ; the service user's uid is usually "stups_<application-id>"
+  (let [app-id (last (str/split user-id #"_"))]
+       (:team_id (:body (http/get (r/conpath kio-url "/apps/" app-id)
+                                  {:oauth-token access-token
+                                   :as          :json})))))
+
+(def get-service-team
+    "Cache team information for 10 minutes"
+    (memo/fifo fetch-service-team (cache/ttl-cache-factory {} :ttl 600000) :fifo/threshold 100))
+
+(defn require-service-team
+  [team request]
+  (u/require-realms #{"services"} request)
+  (let [kio-url (require-config (:configuration request) :kio-url)
+        tokeninfo (:tokeninfo request)
+        user-id (get tokeninfo "uid")
+        token (get tokeninfo "access_token")
+        service-team (get-service-team kio-url token user-id)]
+        (when-not (= service-team team)
+                  (log/info "ACCESS DENIED (unauthorized) because service user is not in team %s." team)
+                  (api/throw-error 403 (str "service user not in team '" team "'")
+                                   {:user          user-id
+                                    :required-team team
+                                    :service-team  service-team}))))
+
 (defn require-write-access
   "Require write access to team repository"
   [team request]
   ; either user has write access to all (service user)
   ; or user belongs to a team (employee user)
   (when-not (get-in request [:tokeninfo "application.write_all"])
-    (u/require-internal-team team request)))
+    (if (get-in request [:tokeninfo "application.write"])
+        (require-service-team team request)
+        (u/require-internal-team team request))))
 
 (defn ping
   "Client checks for compatibility."
