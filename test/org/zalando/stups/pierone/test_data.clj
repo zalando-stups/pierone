@@ -6,10 +6,10 @@
     :metadata "{\"id\": \"abc1\", \"parent\": \"def2\", \"key/with/slash\": \"test\"}"
     :data     (.getBytes "img1data")}
    {:id       "def2"
-    :metadata "{\"id\": \"def2\", \"parent\": \"aaa3\"}"
+    :metadata "{\"id\": \"def2\", \"parent\": \"abc3\"}"
     :data     (.getBytes "img2data")}
-   {:id       "aaa3"
-    :metadata "{\"id\": \"aaa3\"}"
+   {:id       "abc3"
+    :metadata "{\"id\": \"abc3\"}"
     :data     (.getBytes "img3data")}])
 
 (def image-single
