@@ -342,7 +342,7 @@ paths:
             type: object
             properties:
               num_results:
-                type: int
+                type: integer
               query:
                 type: string
               results:
