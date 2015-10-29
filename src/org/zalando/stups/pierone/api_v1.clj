@@ -33,6 +33,13 @@
    :author   schema/Str
    :status   schema/Str})
 
+
+; relaxed pattern: hex, 3-64 chars
+(def valid-image-v1-pattern #"^[a-f0-9]{3,64}$")
+
+(defn valid-image-v1 [image-id]
+  (and (some? image-id) (re-matches valid-image-v1-pattern image-id)))
+
 (defn- resp
   "Returns a response including various Docker headers set."
   [body request & {:keys [status binary?]
@@ -144,8 +151,9 @@
 (defn get-image-for-tag
   "Get the image id for given tag"
   [{:keys [team artifact name]} request db _]
-  (let [tags (load-tags team artifact db)]
-    (if (contains? tags name)
+  (let [tags (load-tags team artifact db)
+        image-id (get tags name)]
+    (if (valid-image-v1 image-id)
       (resp (str "\"" (get tags name) "\"") request)
       (resp "not found" request :status 404))))
 
@@ -213,7 +221,7 @@
   "Returns an image's metadata."
   [parameters request db _]
   (let [result (sql/cmd-get-image-metadata parameters {:connection db})]
-    (if (empty? result)
+    (if (or (empty? result) (not (valid-image-v1 (:image parameters))))
       (resp "image not found" request :status 404)
       (resp (-> result first :metadata json/read-str) request))))
 

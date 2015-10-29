@@ -44,7 +44,7 @@
 
     (is (= 404 (:status (client/get (u/p1-url "/tags/asdfa")
                                     (u/http-opts)))))
-    (is (= 412 (:status (client/get (u/p1-url "/tags/img")
+    (is (= 412 (:status (client/get (u/p1-url "/tags/abc")
                                     (u/http-opts)))))
 
 
@@ -83,7 +83,7 @@
       (println stats)
       (is (:team (first stats))
           (:team d/tag)))
-    
+
     (let [resp (client/get (u/p1-url "/stats")
                            (u/http-opts))
           stats (json/read-str (:body resp)

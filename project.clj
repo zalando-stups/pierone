@@ -1,4 +1,4 @@
-(defproject org.zalando.stups/pierone "1.7.0-SNAPSHOT"
+(defproject org.zalando.stups/pierone "1.8.0-v2-SNAPSHOT"
   :description "Pier One Docker Registry"
   :url "https://github.com/zalando-stups/pierone"
   :license {:name "Apache License"
@@ -49,6 +49,7 @@
 
              :dev     {:repl-options {:init-ns user}
                        :source-paths ["dev"]
+                       :jvm-opts ["-Dhystrix.threadpool.default.coreSize=50"]
                        :dependencies [[org.clojure/tools.namespace "0.2.10"]
                                       [org.clojure/java.classpath "0.2.2"]
                                       [clj-http "2.0.0"]

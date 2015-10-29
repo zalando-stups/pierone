@@ -14,4 +14,5 @@
 
 (defqueries "db/pierone.sql")
 (defqueries "db/v1.sql")
+(defqueries "db/v2.sql")
 (generate-hystrix-commands)

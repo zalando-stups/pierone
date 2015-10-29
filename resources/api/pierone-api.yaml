@@ -76,6 +76,36 @@ definitions:
       storage:
         type: integer
 
+parameters:
+  team:
+    name: team
+    in: path
+    type: string
+    required: true
+  artifact:
+    name: artifact
+    in: path
+    type: string
+    required: true
+  uuid:
+    name: uuid
+    description: Upload UUID as described on https://docs.docker.com/registry/spec/api/#pushing-an-image
+    in: path
+    type: string
+    required: true
+  digest:
+    name: digest
+    description: Layer digest as described on https://docs.docker.com/registry/spec/api/#pushing-an-image
+    in: path
+    type: string
+    required: true
+  name:
+    name: name
+    description: Manifest name
+    in: path
+    type: string
+    required: true
+
 paths:
 
   '/':
@@ -98,8 +128,179 @@ paths:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/ping
       responses:
+        "200":
+          description: v2 is available
+  /v2/{team}/{artifact}/blobs/uploads/:
+    post:
+      summary: start upload
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/post-upload
+      security:
+        - oauth2: [uid]
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+      responses:
+        "202":
+          description: upload accepted
+  /v2/{team}/{artifact}/blobs/uploads/{uuid}:
+    patch:
+      summary: upload FS layer blob
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/patch-upload
+      security:
+        - oauth2: [uid]
+      consumes:
+        - application/octet-stream
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+        - $ref: '#/parameters/uuid'
+        - name: data
+          in: body
+          schema:
+            description: "binary"
+      responses:
+        "202":
+          description: upload accepted
+    put:
+      summary: upload complete
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/put-upload
+      security:
+        - oauth2: [uid]
+      consumes:
+        - application/octet-stream
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+        - $ref: '#/parameters/uuid'
+        - name: digest
+          in: query
+          type: string
+          required: true
+        - name: data
+          in: body
+          schema:
+            description: "binary"
+      responses:
+        "201":
+          description: upload accepted
+  /v2/{team}/{artifact}/blobs/{digest}:
+    head:
+      summary: check layer
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/head-blob
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+        - $ref: '#/parameters/digest'
+      responses:
+        "200":
+          description: exists
         "404":
-          description: v2 is not available
+          description: FS layer blob does not exist
+    get:
+      summary: get layer
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/get-blob
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+        - $ref: '#/parameters/digest'
+      responses:
+        "200":
+          description: exists
+  /v2/{team}/{artifact}/manifests/{name}:
+    put:
+      summary: put manifest
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/put-manifest
+      security:
+        - oauth2: [uid]
+      consumes:
+        - application/octet-stream # Docker sucks
+        - application/json
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+        - $ref: '#/parameters/name'
+        - name: data
+          in: body
+          schema:
+            description: "the manifest"
+      responses:
+        "200":
+          description: OK
+    get:
+      summary: get manifest
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/get-manifest
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+        - $ref: '#/parameters/name'
+      responses:
+        "200":
+          description: OK
+  /v2/{team}/{artifact}/tags/list:
+    get:
+      summary: list tags
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/list-tags
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+      responses:
+        "200":
+          description: list of tags
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "myteam/myart"
+              tags:
+                type: array
+                items:
+                  type: string
+                  example: "1.0"
+  /v2/_catalog:
+    get:
+      summary: list/browse all repositories
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/list-repositories
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+      responses:
+        "200":
+          description: list of repos
+          schema:
+            type: object
+            properties:
+              repositories:
+                type: array
+                items:
+                  type: string
+                  example: "myteam/myart"
+
 
   ## Docker Registry API v1
 
@@ -141,7 +342,7 @@ paths:
             type: object
             properties:
               num_results:
-                type: int
+                type: integer
               query:
                 type: string
               results:
