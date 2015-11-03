@@ -64,8 +64,10 @@
   "Checks for compatibility with version 2."
   [_ request _ _]
   ; NOTE: we are doing our own OAuth check here as Docker requires an extra V2 header set
-  (let [tokeninfo-url (:tokeninfo-url (:configuration request))]
-       (if tokeninfo-url
+  (let [config (:configuration request)
+        tokeninfo-url (:tokeninfo-url config)
+        allow-public-read (:allow-public-read config)]
+       (if (and tokeninfo-url (not allow-public-read))
            (if-let [access-token (extract-access-token request)]
                    ; check access token
                    (if-let [tokeninfo (resolve-access-token tokeninfo-url access-token)]
