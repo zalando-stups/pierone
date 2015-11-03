@@ -78,15 +78,31 @@
            ; no tokeninfo URL => no security checks
            (ping-ok))))
 
-(defn post-upload
-  ""
-  [{:keys [team artifact]} request db _]
+(defn post-upload-generate-uuid
+  [team artifact request]
   (require-write-access team request)
   (let [uuid (UUID/randomUUID)]
        (-> (ring/response "")
            (ring/status 202)
            (ring/header "Location" (str "/v2/" team "/" artifact "/blobs/uploads/" uuid))
            (ring/header "Docker-Upload-UUID" uuid))))
+
+(defn post-upload
+  ""
+  [{:keys [team artifact]} request db _]
+  (let [config (:configuration request)
+        tokeninfo-url (:tokeninfo-url config)
+        allow-public-read (:allow-public-read config)]
+       (if tokeninfo-url
+           (if-let [access-token (extract-access-token request)]
+                   ; check access token
+                   (if-let [tokeninfo (resolve-access-token tokeninfo-url access-token)]
+                           (post-upload-generate-uuid team artifact request)
+                           (ping-unauthorized))
+                   ; missing access token
+                   (ping-unauthorized))
+           ; no tokeninfo URL => no security checks
+           (post-upload-generate-uuid team artifact request))))
 
 (defn get-upload-file [storage team artifact uuid]
   (let [^File dir (io/file (:directory storage) "uploads" team artifact)]

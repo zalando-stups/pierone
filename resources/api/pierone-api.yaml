@@ -136,8 +136,7 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/post-upload
-      security:
-        - oauth2: [uid]
+      # NOTE: custom security check here
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
