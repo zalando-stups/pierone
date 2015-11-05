@@ -12,6 +12,7 @@
 
                  [org.apache.commons/commons-compress "1.10"]
                  [org.clojure/data.codec "0.1.0"]
+                 [org.clojure/data.json "0.2.6"]
 
                  [amazonica "0.3.33"]]
 
