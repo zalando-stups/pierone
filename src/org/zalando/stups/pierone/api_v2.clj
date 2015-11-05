@@ -256,7 +256,7 @@
 (defn list-tags
   "get"
   [{:keys [team artifact] :as parameters} request db _]
-  (let [tags (map :name (sql/list-tags parameters {:connection db}))]
+  (let [tags (map :name (sql/list-tag-names parameters {:connection db}))]
     (resp {:name (str team "/" artifact) :tags tags} request)))
 
 (defn list-repositories

@@ -45,7 +45,7 @@ SELECT t_manifest AS manifest
    AND t_artifact = :artifact
    AND t_name = :name;
 
--- name: list-tags
+-- name: list-tag-names
 SELECT t_name AS name
   FROM tags
  WHERE t_team = :team
