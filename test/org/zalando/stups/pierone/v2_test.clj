@@ -76,12 +76,12 @@
             (client/get (u/v2-url "/myteam/myart/manifests/1.0")
                         (u/http-opts)))))
 
-    (is (= "{\"name\":\"myteam\\/myart\",\"tags\":[\"1.0\"]}"
+    (is (= "{\"name\":\"myteam/myart\",\"tags\":[\"1.0\"]}"
            (expect 200
             (client/get (u/v2-url "/myteam/myart/tags/list")
                         (u/http-opts)))))
 
-    (is (= "{\"repositories\":[\"myteam\\/myart\"]}"
+    (is (= "{\"repositories\":[\"myteam/myart\"]}"
            (expect 200
             (client/get (u/v2-url "/_catalog")
                         (u/http-opts)))))
