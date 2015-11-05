@@ -1,4 +1,4 @@
-FROM zalando/openjdk:8u66-b17-1-1
+FROM zalando/openjdk:8u66-b17-1-2
 
 MAINTAINER Zalando SE
 
