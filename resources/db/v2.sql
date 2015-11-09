@@ -35,7 +35,6 @@ UPDATE tags
  WHERE t_team = :team
    AND t_artifact = :artifact
    AND t_name = :name
-   AND t_image_id != :image
    AND t_manifest != :manifest;
 
 -- name: get-manifest
