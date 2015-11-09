@@ -35,7 +35,7 @@ UPDATE tags
  WHERE t_team = :team
    AND t_artifact = :artifact
    AND t_name = :name
-   AND t_manifest != :manifest;
+   AND t_manifest IS DISTINCT FROM :manifest;
 
 -- name: get-manifest
 SELECT t_manifest AS manifest
