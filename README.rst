@@ -73,7 +73,7 @@ You will need a PostgreSQL database (database schemas are created automatically 
 ``HTTP_TEAM_SERVICE_URL``
     URL to get team membership information by user's UID.
 ``HTTP_TOKENINFO_URL``
-    OAuth2 token info URL (e.g. https://example.org/oauth2/tokeninfo)
+    OAuth2 token info URL (e.g. https://example.org/oauth2/tokeninfo). You can leave away this configuration property to disable OAuth authentication.
 ``PGSSLMODE``
     Set to "verify-full" in order to fully verify the Postgres SSL cert.
 ``STORAGE_S3_BUCKET``
@@ -83,6 +83,16 @@ See the `STUPS Installation Guide section on Pier One`_ for details about deploy
 
 .. _Leiningen: http://leiningen.org/
 .. _STUPS Installation Guide section on Pier One: http://docs.stups.io/en/latest/installation/service-deployments.html#pier-one
+
+Security
+========
+
+Pier One uses OAuth 2 to protect its resources. The current implementation assumes:
+
+* OAuth token information contains the ``uid`` field with the user's ID (e.g. "jdoe")
+* The user's team membership can be looked up in the team service
+* Authenticated users are allowed to pull all Docker images
+* Authenticated users are allowed to push to their team's repository only
 
 License
 =======
