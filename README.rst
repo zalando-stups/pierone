@@ -94,6 +94,10 @@ Pier One uses OAuth 2 to protect its resources. The current implementation assum
 * Authenticated users are allowed to pull all Docker images
 * Authenticated users are allowed to push to their team's repository only
 
+The `Pier One CLI`_ allows configuring the Docker client with the appropriate auth credentials.
+
+.. _Pier One CLI: https://github.com/zalando-stups/pierone-cli
+
 License
 =======
 
