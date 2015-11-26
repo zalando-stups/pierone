@@ -7,14 +7,11 @@
   :min-lein-version "2.0.0"
 
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.zalando.stups/friboo "1.4.1"]
-                 [yesql "0.5.0"]
+                 [org.zalando.stups/friboo "1.5.3"]
+                 [yesql "0.5.1"]
 
                  [org.apache.commons/commons-compress "1.10"]
-                 [org.clojure/data.codec "0.1.0"]
-                 [org.clojure/data.json "0.2.6"]
-
-                 [amazonica "0.3.33"]]
+                 [org.clojure/data.codec "0.1.0"]]
 
   :main ^:skip-aot org.zalando.stups.pierone.core
   :uberjar-name "pierone.jar"

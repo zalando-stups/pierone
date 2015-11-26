@@ -4,7 +4,7 @@
             [clojure.test :refer :all]
             [clojure.java.io :as io]
             [clj-http.client :as client]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [com.stuartsierra.component :as component]))
 
 (deftest v1-test
@@ -34,8 +34,8 @@
                                                  (:id image)
                                                  "/json")
                                        (u/http-opts)))]
-        (is (= (json/read-str body)
-               (json/read-str (:metadata image)))))
+        (is (= (json/parse-string body)
+               (json/parse-string (:metadata image)))))
       (let [response (client/get (u/v1-url "/images/"
                                            (:id image)
                                            "/layer")
@@ -57,7 +57,7 @@
                                                    (:id root)
                                                    "/ancestry")
                                          (u/http-opts)))
-          ancestry (into #{}(json/read-str ancestry))]
+          ancestry (into #{}(json/parse-string ancestry))]
       (is (= (count ancestry)
              (count d/images-hierarchy)))
       (doseq [image d/images-hierarchy]
@@ -144,7 +144,7 @@
                                                      "/" (:artifact d/tag)
                                                      "/tags")
                                            (u/http-opts)))
-            result (json/read-str resp)
+            result (json/parse-string resp)
             tags-in-result (set (map first result))]
         ; contains the test tag, snapshot tag and virtual "latest" tag
         (is (= (count result)

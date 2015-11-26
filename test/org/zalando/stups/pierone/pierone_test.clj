@@ -2,7 +2,7 @@
   (:require [org.zalando.stups.pierone.test-data :as d]
             [org.zalando.stups.pierone.test-utils :as u]
             [clojure.test :refer :all]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [clj-http.client :as client]
             [com.stuartsierra.component :as component]))
 
@@ -33,7 +33,7 @@
 
     (let [result (-> (client/get (u/p1-url "/tags/" (:id root)))
                      (:body)
-                     (json/read-str :key-fn keyword)
+                     (json/parse-string keyword)
                      (first))]
         (is (= (:artifact result)
                (:artifact d/tag)))
@@ -63,8 +63,7 @@
     ; check stats endpoint
     (let [resp (client/get (u/p1-url "/stats/teams/" (:team d/tag))
                            (u/http-opts))
-          stats (json/read-str (:body resp)
-                               :key-fn keyword)]
+          stats (json/parse-string (:body resp) keyword)]
       (is (= 200 (:status resp)))
       (println stats)
       ; kio is the only artifact
@@ -76,8 +75,7 @@
 
     (let [resp (client/get (u/p1-url "/stats/teams")
                            (u/http-opts))
-          stats (json/read-str (:body resp)
-                               :key-fn keyword)]
+          stats (json/parse-string (:body resp) keyword)]
       (is (= 200 (:status resp)))
       (is (= 1 (count stats)))
       (println stats)
@@ -86,8 +84,7 @@
 
     (let [resp (client/get (u/p1-url "/stats")
                            (u/http-opts))
-          stats (json/read-str (:body resp)
-                               :key-fn keyword)]
+          stats (json/parse-string (:body resp) keyword)]
       (is (= 200 (:status resp)))
       (println stats)
       (is (= 1 (:teams stats)))

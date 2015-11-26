@@ -1,10 +1,11 @@
 (ns org.zalando.stups.pierone.api-v2
-  (:require [org.zalando.stups.friboo.system.http :refer [def-http-component resolve-access-token]]
+  (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
+            [org.zalando.stups.friboo.system.oauth2 :refer [resolve-access-token]]
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.user :as u]
             [io.sarnowski.swagger1st.util.api :as api]
             [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [ring.util.response :as ring]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
@@ -194,7 +195,7 @@
   "Read manifest JSON and throw 'Bad Request' if invalid"
   [data]
   (try
-    (json/read-str (slurp data))
+    (json/parse-string (slurp data))
     (catch Exception e
       (api/throw-error 400 "invalid manifest JSON"))))
 
@@ -215,7 +216,7 @@
                           :artifact artifact
                           :name name
                           :image digest
-                          :manifest (json/write-str manifest)
+                          :manifest (json/generate-string manifest)
                           :fs_layers fs-layers
                           :user uid}
         tag-ident (str team "/" artifact ":" name)]

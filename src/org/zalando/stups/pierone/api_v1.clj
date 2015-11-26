@@ -3,7 +3,7 @@
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.ring :as r]
             [ring.util.response :as ring]
-            [clojure.data.json :as json]
+            [cheshire.core :as json]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -205,7 +205,7 @@
     (sql/delete-unaccepted-image! {:image image} {:connection db})
     (sql/create-image!
       {:image    image
-       :metadata (json/write-str metadata)
+       :metadata (json/generate-string metadata)
        :parent   (get metadata "parent")
        :user     (get-in request [:tokeninfo "uid"])}
       {:connection db})
@@ -223,11 +223,11 @@
   (let [result (sql/cmd-get-image-metadata parameters {:connection db})]
     (if (or (empty? result) (not (valid-image-v1 (:image parameters))))
       (resp "image not found" request :status 404)
-      (resp (-> result first :metadata json/read-str) request))))
+      (resp (-> result first :metadata json/parse-string) request))))
 
 (defn extract-scm-source
   [file]
-  (schema/validate ScmSourceInformation (json/read-str (slurp file) :key-fn keyword)))
+  (schema/validate ScmSourceInformation (json/parse-string (slurp file) keyword)))
 
 (defn get-scm-source-data
   [tmp-file]
