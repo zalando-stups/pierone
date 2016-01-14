@@ -380,7 +380,7 @@ paths:
   /v1/repositories/{team}/{artifact}/tags:
     get:
       summary: list tags
-      description: Lists all tags of an artifact sorted by time (most recently pushed tag last).
+      description: Lists all tags of an artifact.
       tags:
         - Docker Registry API v1
       operationId: org.zalando.stups.pierone.api-v1/get-tags
@@ -704,7 +704,7 @@ paths:
   /teams/{team}/artifacts/{artifact}/tags:
     get:
       summary: list tags
-      description: lists all tags of an artifact
+      description: Lists all tags of an artifact sorted by time (most recently pushed tag last).
       tags:
         - Pier One API
       operationId: org.zalando.stups.pierone.api/read-tags
