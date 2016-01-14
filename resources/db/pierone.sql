@@ -16,7 +16,8 @@ SELECT t_name AS name,
        t_image_id AS image
   FROM tags
  WHERE t_team = :team
-   AND t_artifact = :artifact;
+   AND t_artifact = :artifact
+ORDER BY t_created;
 
 -- name: list-images
 SELECT i_id AS id,
