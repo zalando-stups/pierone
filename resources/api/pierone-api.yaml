@@ -231,6 +231,7 @@ paths:
       consumes:
         - application/octet-stream # Docker sucks
         - application/json
+        - application/vnd.docker.distribution.manifest.v2+json
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
