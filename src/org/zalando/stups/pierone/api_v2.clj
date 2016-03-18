@@ -224,7 +224,8 @@
                           :artifact artifact
                           :name name
                           :image digest
-                          :manifest (json/generate-string manifest)
+                          :manifest (json/generate-string manifest {:pretty true})
+                          ;:manifest (json/generate-string manifest)
                           :fs_layers fs-layers
                           :user uid}
         tag-ident (str team "/" artifact ":" name)]
