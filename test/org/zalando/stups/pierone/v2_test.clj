@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.test :refer :all]
             [clj-http.client :as client]
+            [cheshire.core :refer :all :as json]
             [com.stuartsierra.component :as component]))
 
 (defn expect [status-code response]
@@ -19,10 +20,12 @@
         digest "sha256:a5c741c7dea3a96944022b4b9a0b1480cfbeef5f4cc934850e8afacb48e18c5e"
         invalid-manifest (.getBytes "stuff")
         manifest (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"}]}")
+        pretty-manifest (json/generate-string (json/parse-string manifest) {:pretty true})
         manifest-bytes (.getBytes manifest)
         ; manifest2 is simply a different manifest (we use the same FS layer twice, does not make sense, but works)
         manifest2 (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"},{\"blobSum\":\"" digest "\"}]}")
-        manifest3 (slurp "manifest.json")
+        pretty-manifest2 (json/generate-string (json/parse-string manifest2) {:pretty true})
+        manifest3 (slurp "test/org/zalando/stups/pierone/manifest.json")
         manifest2-bytes (.getBytes manifest2)]
 
     (u/wipe-db system)
@@ -75,10 +78,10 @@
             (client/put (u/v2-url "/myteam/myart/manifests/1.0")
                         (u/http-opts (io/input-stream manifest-bytes))))
 
-    ;(is (= manifest
-    ;       (expect 200
-    ;        (client/get (u/v2-url "/myteam/myart/manifests/1.0")
-    ;                    (u/http-opts)))))
+    (is (= pretty-manifest
+           (expect 200
+                   (client/get (u/v2-url "/myteam/myart/manifests/1.0")
+                               (u/http-opts)))))
 
     (is (= "{\"name\":\"myteam/myart\",\"tags\":[\"1.0\"]}"
            (expect 200
@@ -109,20 +112,20 @@
             (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
                         (u/http-opts (io/input-stream manifest-bytes))))
 
-    ;(is (= manifest
-    ;       (expect 200
-    ;        (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-    ;                    (u/http-opts)))))
+    (is (= pretty-manifest
+           (expect 200
+            (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
+                        (u/http-opts)))))
 
     ; update, new manifest
     (expect 200
             (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
                         (u/http-opts (io/input-stream manifest2-bytes))))
 
-    ;(is (= manifest2
-    ;       (expect 200
-    ;        (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-    ;                    (u/http-opts)))))
+    (is (= pretty-manifest2
+           (expect 200
+            (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
+                        (u/http-opts)))))
 
     ; stop
     (component/stop system)))
