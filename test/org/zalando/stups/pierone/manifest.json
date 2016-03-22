@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "name": "stups/zmon-demo-bootstrap",
+  "tag": "cd20",
+  "architecture": "amd64",
+  "fsLayers": [
+    {
+      "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+    }
+  ],
+  "history": [
+    {
+      "v1Compatibility": "{\"id\":\"e5def42e58b311b2ac715eed8e18381b9d1db1d0be2ac1678a3055a7397de3e5\",\"parent\":\"43ea2c9a714e391a6de44c9c9b8aaaa28dcfaa1bcf180e751cd480897882eb9c\",\"created\":\"2016-01-30T20:33:50.73914168Z\",\"container\":\"4f585e9941a70093d37a08d796315f499ea4a38d41cf304157331cf18c5f30d7\",\"container_config\":{\"Hostname\":\"ca5fd9ca11dc\",\"Domainname\":\"\",\"User\":\"\",\"AttachStdin\":false,\"AttachStdout\":false,\"AttachStderr\":false,\"Tty\":false,\"OpenStdin\":false,\"StdinOnce\":false,\"Env\":[\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\"LANG=en_US.UTF-8\",\"REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt\"],\"Cmd\":[\"/bin/sh\",\"-c\",\"#(nop) CMD [\\\"/bin/sh\\\" \\\"-c\\\" \\\"/bootstrap/bootstrap.sh\\\"]\"],\"Image\":\"43ea2c9a714e391a6de44c9c9b8aaaa28dcfaa1bcf180e751cd480897882eb9c\",\"Volumes\":{\"/tmp\":{}},\"WorkingDir\":\"/workdir\",\"Entrypoint\":null,\"OnBuild\":[],\"Labels\":null},\"docker_version\":\"1.8.3\",\"config\":{\"Hostname\":\"ca5fd9ca11dc\",\"Domainname\":\"\",\"User\":\"\",\"AttachStdin\":false,\"AttachStdout\":false,\"AttachStderr\":false,\"Tty\":false,\"OpenStdin\":false,\"StdinOnce\":false,\"Env\":[\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\"LANG=en_US.UTF-8\",\"REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt\"],\"Cmd\":[\"/bin/sh\",\"-c\",\"/bootstrap/bootstrap.sh\"],\"Image\":\"43ea2c9a714e391a6de44c9c9b8aaaa28dcfaa1bcf180e751cd480897882eb9c\",\"Volumes\":{\"/tmp\":{}},\"WorkingDir\":\"/workdir\",\"Entrypoint\":null,\"OnBuild\":[],\"Labels\":null},\"architecture\":\"amd64\",\"os\":\"linux\"}"
+    }
+  ],
+  "signatures": [
+    {
+      "header": {
+        "jwk": {
+          "crv": "P-256",
+          "kid": "TSB7:LZ62:NMUV:BCCA:ZWQS:XBIF:RFSB:5A6Q:JNOE:5YU2:TEAR:XNNV",
+          "kty": "EC",
+          "x": "KIcr3qftcEQ4yVp5QmN0LWstEyvZFfsE_QNXr32g22E",
+          "y": "Sc5TWRJEoQw3iF6SLTdr-q8f7lpFIkwbYY7NQmLs3gw"
+        },
+        "alg": "ES256"
+      },
+      "signature": "0NX0w6_O7gFi3nEPJFnHGoajSM0b3AnWzwyWDyulZREtcSV_JsFWZ3wwnu8DzReiXgmF5qCN9bIUww0RC-QqxA",
+      "protected": "eyJmb3JtYXRMZW5ndGgiOjIwMzU0LCJmb3JtYXRUYWlsIjoiQ24wIiwidGltZSI6IjIwMTYtMDEtMzBUMjA6MzM6NTdaIn0"
+    }
+  ]
+}

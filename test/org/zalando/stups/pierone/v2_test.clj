@@ -22,6 +22,7 @@
         manifest-bytes (.getBytes manifest)
         ; manifest2 is simply a different manifest (we use the same FS layer twice, does not make sense, but works)
         manifest2 (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"},{\"blobSum\":\"" digest "\"}]}")
+        manifest3 (slurp "manifest.json")
         manifest2-bytes (.getBytes manifest2)]
 
     (u/wipe-db system)

@@ -225,7 +225,6 @@
                           :name name
                           :image digest
                           :manifest (json/generate-string manifest {:pretty true})
-                          ;:manifest (json/generate-string manifest)
                           :fs_layers fs-layers
                           :user uid}
         tag-ident (str team "/" artifact ":" name)]
@@ -260,7 +259,7 @@
   "get"
   [parameters request db _]
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
-    (resp manifest request)
+    (resp (json/generate-string (json/parse-string manifest) {:pretty true}) request)
     (resp "manifest not found" request :status 404)))
 
 (defn list-tags
