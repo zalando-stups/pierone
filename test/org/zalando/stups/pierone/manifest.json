@@ -5,7 +5,7 @@
   "architecture": "amd64",
   "fsLayers": [
     {
-      "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+      "blobSum": "sha256:a5c741c7dea3a96944022b4b9a0b1480cfbeef5f4cc934850e8afacb48e18c5e"
     }
   ],
   "history": [

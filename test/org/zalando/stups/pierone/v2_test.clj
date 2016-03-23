@@ -15,18 +15,20 @@
 
 (deftest v2-test
   (let [system (u/setup)
+        manifest-file (slurp "test/org/zalando/stups/pierone/manifest.json")
+        manifest (json/parse-string manifest-file true)
         data (.getBytes "imgdata")
         ; echo -n 'imgdata' | sha256sum
-        digest "sha256:a5c741c7dea3a96944022b4b9a0b1480cfbeef5f4cc934850e8afacb48e18c5e"
+        ;digest sha256:a5c741c7dea3a96944022b4b9a0b1480cfbeef5f4cc934850e8afacb48e18c5e
+        digest (-> manifest :fsLayers first :blobSum)
         invalid-manifest (.getBytes "stuff")
-        manifest (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"}]}")
-        pretty-manifest (json/generate-string (json/parse-string manifest) {:pretty true})
-        manifest-bytes (.getBytes manifest)
+        ;manifest (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"}]}")
+        pretty-manifest (json/generate-string manifest {:pretty true})
+        manifest-bytes (.getBytes pretty-manifest)
         ; manifest2 is simply a different manifest (we use the same FS layer twice, does not make sense, but works)
-        manifest2 (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"},{\"blobSum\":\"" digest "\"}]}")
-        pretty-manifest2 (json/generate-string (json/parse-string manifest2) {:pretty true})
-        manifest3 (slurp "test/org/zalando/stups/pierone/manifest.json")
-        manifest2-bytes (.getBytes manifest2)]
+        manifest2 (update-in manifest [:fsLayers] (fn [old] (vec (take 2 (repeat (first old))))))
+        pretty-manifest2 (json/generate-string manifest2 {:pretty true})
+        manifest2-bytes (.getBytes pretty-manifest2)]
 
     (u/wipe-db system)
 
@@ -114,8 +116,8 @@
 
     (is (= pretty-manifest
            (expect 200
-            (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                        (u/http-opts)))))
+                   (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
+                               (u/http-opts)))))
 
     ; update, new manifest
     (expect 200
@@ -124,8 +126,8 @@
 
     (is (= pretty-manifest2
            (expect 200
-            (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                        (u/http-opts)))))
+                   (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
+                               (u/http-opts)))))
 
     ; stop
     (component/stop system)))
