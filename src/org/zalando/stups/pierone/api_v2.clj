@@ -218,6 +218,36 @@
                  (map :digest (:layers manifest)))))
 
 (defn put-manifest
+
+; put to original registry
+; PUT /v2/foo/bar/manifests/15 HTTP/1.1
+; Host: localhost:8080
+; User-Agent: docker/1.11.0-dev go/go1.5.3 git-commit/4745656-unsupported kernel/4.4.3-040403-generic os/linux arch/amd64 UpstreamClient(Docker-Client/1.9.1 \(linux\))
+; Content-Length: 292
+; Content-Type: application/vnd.docker.distribution.manifest.v2+json
+; Accept-Encoding: gzip
+; Connection: close
+;
+; {
+;    "schemaVersion": 2,
+;    "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+;    "config": {
+;       "mediaType": "application/octet-stream",
+;       "size": 1369,
+;       "digest": "sha256:4a7acc1b1ba83011bb83db213ec36f235fc60f9575fac7943bf22dfa07fb62f8"
+;    },
+;    "layers": []
+; }HTTP/1.1 201 Created
+; Docker-Content-Digest: sha256:526b835d43dcaeeb28ad417856246c7d530290a84380b70ad158422ba6a2d877
+; Docker-Distribution-Api-Version: registry/2.0
+; Location: http://localhost:8080/v2/foo/bar/manifests/sha256:526b835d43dcaeeb28ad417856246c7d530290a84380b70ad158422ba6a2d877
+; X-Content-Type-Options: nosniff
+; Date: Wed, 30 Mar 2016 17:11:01 GMT
+; Content-Length: 0
+; Content-Type: text/plain; charset=utf-8
+; Connection: close
+;
+
   "Stores an image's JSON metadata. Last call in upload sequence."
   [{:keys [team artifact name data]} request db _]
   (require-write-access team request)
@@ -245,7 +275,7 @@
       (try
         (sql/create-manifest! params-with-user connection)
         (log/info "Stored new tag %s." tag-ident)
-        (resp "OK" request)
+        (resp "OK" request :status 201)
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
