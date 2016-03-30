@@ -20,8 +20,8 @@ UPDATE images
 
 -- name: create-manifest!
 INSERT INTO tags
-       (t_team, t_artifact, t_name, t_manifest, t_image_id, t_fs_layers, t_created_by)
-VALUES (:team, :artifact, :name, :manifest, :image, ARRAY[ :fs_layers ], :user);
+       (t_team, t_artifact, t_name, t_manifest, t_image_id, t_fs_layers, t_created_by, t_schema_version)
+VALUES (:team, :artifact, :name, :manifest, :image, ARRAY[ :fs_layers ], :user, :schema_version);
 
 -- name: update-manifest!
 UPDATE tags
@@ -35,6 +35,7 @@ UPDATE tags
  WHERE t_team = :team
    AND t_artifact = :artifact
    AND t_name = :name
+   AND t_schema_version = :schema_version
    AND t_manifest IS DISTINCT FROM :manifest;
 
 -- name: get-manifest
@@ -42,14 +43,17 @@ SELECT t_manifest AS manifest
   FROM tags
  WHERE t_team = :team
    AND t_artifact = :artifact
-   AND t_name = :name;
+   AND t_name = :name
+   AND t_schema_version = :schema_version;
 
 -- name: list-tag-names
 SELECT t_name AS name
   FROM tags
  WHERE t_team = :team
-   AND t_artifact = :artifact;
+   AND t_artifact = :artifact
+   AND t_schema_version = 2;
 
 -- name: list-repositories
 SELECT t_team || '/' || t_artifact AS name
-  FROM tags;
+  FROM tags
+ WHERE t_schema_version = 2;

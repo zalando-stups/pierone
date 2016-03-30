@@ -4,12 +4,13 @@ SELECT t_name AS name,
        t_created AS created
   FROM tags
  WHERE t_team = :team
-   AND t_artifact = :artifact;
+   AND t_artifact = :artifact
+   AND t_schema_version = 1;
 
 -- name: create-tag!
 INSERT INTO tags
-       (t_team, t_artifact, t_name, t_image_id, t_created_by)
-VALUES (:team, :artifact, :name, :image, :user);
+       (t_team, t_artifact, t_name, t_image_id, t_created_by, t_schema_version)
+VALUES (:team, :artifact, :name, :image, :user, 1);
 
 -- name: update-tag!
 UPDATE tags
@@ -21,7 +22,8 @@ UPDATE tags
  WHERE t_team = :team
    AND t_artifact = :artifact
    AND t_name = :name
-   AND t_image_id != :image;
+   AND t_image_id != :image
+   AND t_schema_version = 1;
 
 -- name: create-image!
 INSERT INTO images
@@ -69,7 +71,7 @@ ORDER BY name
     AS (VALUES (:image)
          UNION
         SELECT img.i_parent_id
-          FROM images img, 
+          FROM images img,
                parents p
          WHERE img.i_id = p.i_id
            AND img.i_accepted = TRUE)

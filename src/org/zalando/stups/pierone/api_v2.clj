@@ -9,6 +9,7 @@
             [ring.util.response :as ring]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
+            [clojure.walk :as walk]
             [org.zalando.stups.friboo.ring :refer :all]
             [com.netflix.hystrix.core :refer [defcommand]]
             [org.zalando.stups.pierone.storage :as s])
@@ -202,14 +203,19 @@
 (defn read-manifest
   "Read manifest JSON and throw 'Bad Request' if invalid"
   [data]
-  (try
-    (json/parse-string (slurp data))
-    (catch Exception e
-      (api/throw-error 400 "invalid manifest JSON"))))
+  (if (map? data)
+    data
+    (try
+      (walk/keywordize-keys (json/parse-string (slurp data)))
+      (catch Exception e
+        (api/throw-error 400 (str data))))))
 
 (defn get-fs-layers
    [manifest]
-   (map #(get % "blobSum") (get manifest "fsLayers")))
+   (if (= 1 (get manifest :schemaVersion))
+     (map :blobSum (:fsLayers manifest ))
+     (apply conj [(get-in manifest [:config :digest])]
+                 (map :digest (:layers manifest)))))
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
@@ -226,7 +232,8 @@
                           :image digest
                           :manifest (json/generate-string manifest)
                           :fs_layers fs-layers
-                          :user uid}
+                          :user uid
+                          :schema_version (:schemaVersion manifest)}
         tag-ident (str team "/" artifact ":" name)]
     (when-not (seq fs-layers)
               (api/throw-error 400 "manifest has no FS layers"))
@@ -258,9 +265,13 @@
 (defn get-manifest
   "get"
   [parameters request db _]
-  (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
-    (resp manifest request)
-    (resp "manifest not found" request :status 404)))
+  ; docker 1.11 and before supports only schema-version 1 for get, independent of the accept headers
+  ; TODO FIXME when the docker client breaks
+  (let [schema-version 1]
+    (if-let [manifest (:manifest (first (sql/get-manifest (assoc parameters :schema_version schema-version)
+                                                          {:connection db})))]
+      (resp manifest request)
+      (resp "manifest not found" request :status 404))))
 
 (defn list-tags
   "get"
@@ -273,4 +284,3 @@
   [_ request db _]
   (let [repos (map :name (sql/list-repositories {} {:connection db}))]
     (resp {:repositories repos} request)))
-
