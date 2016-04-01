@@ -236,7 +236,10 @@
                 tar-stream (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
       (loop []
         (when-let [entry (.getNextTarEntry tar-stream)]
-          (if (= (.getName entry) "scm-source.json")
+          (if (or (= (.getName entry)
+                     "./scm-source.json")
+                  (= (.getName entry)
+                     "scm-source.json"))
             (extract-scm-source tar-stream)
             (recur)))))
     (catch Exception e
