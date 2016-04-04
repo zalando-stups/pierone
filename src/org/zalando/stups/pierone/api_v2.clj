@@ -300,7 +300,8 @@
   (let [schema-version 1]
     (if-let [manifest (:manifest (first (sql/get-manifest (assoc parameters :schema_version schema-version)
                                                           {:connection db})))]
-      (resp manifest request)
+      (-> (resp manifest request)
+          (ring/content-type "application/vnd.docker.distribution.manifest.v1+prettyjws"))
       (resp "manifest not found" request :status 404))))
 
 (defn list-tags
