@@ -261,10 +261,10 @@
               (if (pos? updated-rows)
                 (do
                   (log/info "Updated snapshot tag %s." tag-ident)
-                  (resp "OK" request))
+                  (resp "OK" request :status 201))
                 (do
                   (log/info "Did not update snapshot tag %s because image is the same." tag-ident)
-                  (resp "tag not modified" request))))
+                  (resp "tag not modified" request :status 201))))
             (do
               (log/warn "Prevented update of tag %s: %s" tag-ident (str e))
               (resp {:errors [{:code "TAG_INVALID" :message "tag already exists"}]} request :status 409))))))))
