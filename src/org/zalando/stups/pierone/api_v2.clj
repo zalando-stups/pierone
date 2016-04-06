@@ -247,11 +247,12 @@
         (log/info "Stored new tag %s." tag-ident)
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
-              (str "sha256:" (digest/sha-256
+              (str "sha256:" (digest/sha-256 ;"teststring"
                 (json/encode data {:pretty { :indentation 3
                                              :object-field-value-separator ": "
                                              :indent-arrays? true
-                                             :indent-objects? true}})))))
+                                             :indent-objects? true}})
+                                             ))))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
@@ -272,11 +273,23 @@
   "get"
   [parameters request db _]
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
-    (let [pretty (json/encode (json/decode manifest) {:pretty { :indentation 3
+    (let [parsed-manifest (json/decode manifest)
+          pretty (json/encode parsed-manifest {:pretty { :indentation 3
                                                                 :object-field-value-separator ": "
                                                                 :indent-arrays? true
-                                                                :indent-objects? true}})]
-      (resp pretty request))
+                                                                :indent-objects? true}})
+          schemaVersion (get parsed-manifest "schemaVersion")
+          set-header-fn (fn [response]
+                          (cond
+                            (= 1 schemaVersion)
+                              (ring/content-type response "application/vnd.docker.distribution.manifest.v1+prettyjws")
+                            (= 2 schemaVersion)
+                              (ring/content-type response "application/vnd.docker.distribution.manifest.v2+json")
+                            :else response))]
+      (-> (resp pretty request)
+          (set-header-fn)
+          (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))
+          ))
       (resp "manifest not found" request :status 404)))
 
 (defn list-tags
