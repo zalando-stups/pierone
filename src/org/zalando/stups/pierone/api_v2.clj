@@ -6,6 +6,7 @@
             [io.sarnowski.swagger1st.util.api :as api]
             [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
             [cheshire.core :as json]
+            [digest]
             [ring.util.response :as ring]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
@@ -275,7 +276,13 @@
       (try
         (sql/create-manifest! params-with-user connection)
         (log/info "Stored new tag %s." tag-ident)
-        (resp "OK" request :status 201)
+        (-> (resp "OK" request :status 201)
+            (ring/header "Docker-Content-Digest"
+              (str "sha256:" (digest/sha-256
+                (json/encode data {:pretty { :indentation 3
+                                             :object-field-value-separator ": "
+                                             :indent-arrays? true
+                                             :indent-objects? true}})))))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
@@ -300,9 +307,12 @@
   (let [schema-version 1]
     (if-let [manifest (:manifest (first (sql/get-manifest (assoc parameters :schema_version schema-version)
                                                           {:connection db})))]
-      (-> (resp manifest request)
-          (ring/content-type "application/vnd.docker.distribution.manifest.v1+prettyjws"))
-      (resp "manifest not found" request :status 404))))
+      (let [pretty (json/encode (json/decode manifest) {:pretty { :indentation 3
+                                           :object-field-value-separator ": "
+                                           :indent-arrays? true
+                                           :indent-objects? true}})]
+        (resp pretty request))
+        (resp "manifest not found" request :status 404))))
 
 (defn list-tags
   "get"
