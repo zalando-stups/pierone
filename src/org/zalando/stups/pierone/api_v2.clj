@@ -21,6 +21,8 @@
 
 ;; Docker Registry API v2
 ;;
+;{"errors":[{"code":"MANIFEST_UNKNOWN","message":"manifest unknown","detail":{"Tag":"1"}}]}
+(def errors {:MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN" :message "manifest unknown" :detail {}}})
 (def json-pretty-printer (json/create-pretty-printer
                             { :indentation                  3
                               :object-field-value-separator ": "
@@ -289,7 +291,7 @@
           (set-header-fn)
           (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))
           ))
-      (resp "manifest not found" request :status 404)))
+      (resp {:errors [(assoc-in (:MANIFEST_UNKNOWN errors) [:detail] {"Parameters" parameters})]} request :status 404)))
 
 (defn list-tags
   "get"
