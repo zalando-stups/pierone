@@ -251,7 +251,7 @@
         (log/info "Stored new tag %s." tag-ident)
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
-              (str "sha256:" (digest/sha-256 ;"teststring"
+              (str "sha256:" (digest/sha-256
                 (json/encode data {:pretty json-format-config})))))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
