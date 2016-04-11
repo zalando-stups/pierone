@@ -25,7 +25,7 @@
                             { :indentation                  3
                               :object-field-value-separator ": "
                               :indent-arrays?               true
-                              :indent-objects?              true})
+                              :indent-objects?              true}))
 (defn- resp
   "Returns a response including various Docker headers set."
   [body request & {:keys [status binary?]
