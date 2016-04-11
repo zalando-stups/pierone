@@ -21,10 +21,11 @@
 
 ;; Docker Registry API v2
 ;;
-(def json-format-config { :indentation                  3
-                          :object-field-value-separator ": "
-                          :indent-arrays?               true
-                          :indent-objects?              true})
+(def json-pretty-printer (json/create-pretty-printer
+                            { :indentation                  3
+                              :object-field-value-separator ": "
+                              :indent-arrays?               true
+                              :indent-objects?              true})
 (defn- resp
   "Returns a response including various Docker headers set."
   [body request & {:keys [status binary?]
@@ -252,7 +253,7 @@
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
               (str "sha256:" (digest/sha-256
-                (json/encode data {:pretty json-format-config})))))
+                (json/encode data {:pretty json-pretty-printer})))))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
@@ -274,7 +275,7 @@
   [parameters request db _]
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
     (let [parsed-manifest (json/decode manifest)
-          pretty (json/encode parsed-manifest {:pretty json-format-config})
+          pretty (json/encode parsed-manifest {:pretty json-pretty-printer})
           schemaVersion (get parsed-manifest "schemaVersion")
           set-header-fn (fn [response]
                           (cond
