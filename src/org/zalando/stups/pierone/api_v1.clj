@@ -37,6 +37,8 @@
 ; relaxed pattern: hex, 3-64 chars
 (def valid-image-v1-pattern #"^[a-f0-9]{3,64}$")
 
+(def scm-source-file-pattern #"^(\./)?scm-source.json$")
+
 (defn valid-image-v1 [image-id]
   (and (some? image-id) (re-matches valid-image-v1-pattern image-id)))
 
@@ -236,10 +238,7 @@
                 tar-stream (TarArchiveInputStream. (GzipCompressorInputStream. fis))]
       (loop []
         (when-let [entry (.getNextTarEntry tar-stream)]
-          (if (or (= (.getName entry)
-                     "./scm-source.json")
-                  (= (.getName entry)
-                     "scm-source.json"))
+          (if (re-matches scm-source-file-pattern (.getName entry))
             (extract-scm-source tar-stream)
             (recur)))))
     (catch Exception e
