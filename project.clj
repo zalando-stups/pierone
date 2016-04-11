@@ -9,7 +9,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.zalando.stups/friboo "1.5.3"]
                  [yesql "0.5.1"]
-                 [cheshire "5.5.1-SNAPSHOT"]
+                 [cheshire "5.6.0"]
                  [digest "1.4.4"]
                  [org.apache.commons/commons-compress "1.10"]
                  [org.clojure/data.codec "0.1.0"]]
