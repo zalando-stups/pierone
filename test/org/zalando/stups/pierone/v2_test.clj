@@ -37,7 +37,10 @@
         pretty-manifest-v2 (json/encode manifestv2 {:pretty json-pretty-printer})
         manifest-bytes (.getBytes pretty-manifest)
         manifest-v2-bytes (.getBytes pretty-manifest-v2)
-        manifest-invalid-version-bytes (.getBytes (json/encode (assoc manifestv2 :schemaVersion "3") {:pretty json-pretty-printer}))
+        manifest-invalid-version-bytes (-> manifestv2
+                                           (assoc :schemaVersion "3")
+                                           (json/encode  {:pretty json-pretty-printer})
+                                           (.getBytes))
         ; manifest-double is simply a different manifest (we use the same FS layer twice, does not make sense, but works)
         manifest-double (update-in manifest [:fsLayers] (fn [old] (vec (take 2 (repeat (first old))))))
         pretty-manifest-double (json/encode manifest-double {:pretty { :indentation 3
