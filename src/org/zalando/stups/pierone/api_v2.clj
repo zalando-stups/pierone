@@ -21,7 +21,9 @@
 
 ;; Docker Registry API v2
 ;;
-(def errors {:MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN" :message "manifest unknown" :detail {}}})
+(def errors { :MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN" :message "manifest unknown" :detail {}}
+              :BLOB_UNKNOWN     {:code "BLOB_UNKNOWN" :message "blob unknown to registry" :detail {}}})
+
 (def json-pretty-printer (json/create-pretty-printer
                             { :indentation                  3
                               :object-field-value-separator ": "
@@ -184,7 +186,7 @@
                   (-> (ring/response "")
                       (ring/status 201)))
                 (do
-                  (resp "image not found" request :status 404))))))
+                  (resp {:errors [(assoc-in (:BLOB_UNKNOWN errors) [:detail] {"Digest" digest})]} request :status 404))))))
 
 (defn head-blob
   "Check whether image (FS layer) exists."
@@ -205,7 +207,7 @@
                    (ring/header "Content-Length" size)
                    ; layers are already GZIP compressed!
                    (ring/header "Content-Encoding" "identity")))
-    (resp "image not found" request :status 404)))
+    (resp {:errors [(assoc-in (:BLOB_UNKNOWN errors) [:detail] {"Digest" digest})]} request :status 404)))
 
 (defn read-manifest
   "Read manifest JSON and throw 'Bad Request' if invalid"
