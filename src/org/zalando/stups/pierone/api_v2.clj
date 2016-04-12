@@ -21,7 +21,6 @@
 
 ;; Docker Registry API v2
 ;;
-;{"errors":[{"code":"MANIFEST_UNKNOWN","message":"manifest unknown","detail":{"Tag":"1"}}]}
 (def errors {:MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN" :message "manifest unknown" :detail {}}})
 (def json-pretty-printer (json/create-pretty-printer
                             { :indentation                  3
