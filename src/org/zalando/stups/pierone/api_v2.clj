@@ -230,10 +230,13 @@
 
 (defn get-fs-layers
    [manifest]
-   (if (= 1 (get manifest :schemaVersion))
-     (map :blobSum (:fsLayers manifest ))
-     (apply conj [(get-in manifest [:config :digest])]
-                 (map :digest (:layers manifest)))))
+   (let [manifest-version (get manifest :schemaVersion)]
+   (if (= 1 manifest-version)
+      (map :blobSum (:fsLayers manifest ))
+      (if (= 2 manifest-version)
+          (apply conj [(get-in manifest [:config :digest])]
+            (map :digest (:layers manifest)))
+          (api/throw-error 400 (str "manifest version not compatible with this API: " manifest-version))))))
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."

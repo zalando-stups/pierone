@@ -13,6 +13,12 @@
       (apply str "response of wrong status: " response))
   (:body response))
 
+(def json-pretty-printer (json/create-pretty-printer
+                            { :indentation                  3
+                              :object-field-value-separator ": "
+                              :indent-arrays?               true
+                              :indent-objects?              true}))
+
 (deftest v2-test
   (let [system (u/setup)
         manifest-file (slurp "test/org/zalando/stups/pierone/manifest.json")
@@ -27,16 +33,11 @@
                        (assoc-in [:config :digest] digest))
         invalid-manifest (.getBytes "stuff")
         ;manifest (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"}]}")
-        pretty-manifest (json/encode manifest {:pretty { :indentation 3
-                                                         :object-field-value-separator ": "
-                                                         :indent-arrays? true
-                                                         :indent-objects? true}})
-        pretty-manifest-v2 (json/encode manifestv2 {:pretty { :indentation 3
-                                                             :object-field-value-separator ": "
-                                                             :indent-arrays? true
-                                                             :indent-objects? true}})
+        pretty-manifest (json/encode manifest {:pretty json-pretty-printer})
+        pretty-manifest-v2 (json/encode manifestv2 {:pretty json-pretty-printer})
         manifest-bytes (.getBytes pretty-manifest)
         manifest-v2-bytes (.getBytes pretty-manifest-v2)
+        manifest-invalid-version-bytes (.getBytes (json/encode (assoc manifestv2 :schemaVersion "3") {:pretty json-pretty-printer}))
         ; manifest-double is simply a different manifest (we use the same FS layer twice, does not make sense, but works)
         manifest-double (update-in manifest [:fsLayers] (fn [old] (vec (take 2 (repeat (first old))))))
         pretty-manifest-double (json/encode manifest-double {:pretty { :indentation 3
@@ -90,6 +91,10 @@
     (expect 400
             (client/put (u/v2-url "/myteam/myart/manifests/1.0")
                         (u/http-opts (io/input-stream invalid-manifest))))
+
+    (expect 400
+            (client/put (u/v2-url "/myteam/myart/manifests/1.0")
+                        (u/http-opts (io/input-stream manifest-invalid-version-bytes))))
 
     (expect 201
             (client/put (u/v2-url "/myteam/myart/manifests/1.0")
