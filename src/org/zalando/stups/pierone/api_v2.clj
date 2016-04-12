@@ -22,7 +22,16 @@
 ;; Docker Registry API v2
 ;;
 (def errors { :MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN" :message "manifest unknown" :detail {}}
-              :BLOB_UNKNOWN     {:code "BLOB_UNKNOWN" :message "blob unknown to registry" :detail {}}})
+              :BLOB_UNKNOWN     {:code "BLOB_UNKNOWN" :message "blob unknown to registry" :detail {}}
+              :TAG_INVALID      {:code "TAG_INVALID" :message "tag already exists" :detail {}}})
+
+;{:errors [(assoc-in (:BLOB_UNKNOWN errors) [:detail] {"Digest" digest})]}
+(defn get-error-response [error-id args]
+  (condp = error-id
+    :BLOB_UNKNOWN {:errors [(assoc (:BLOB_UNKNOWN errors) :detail args)]}
+    :MANIFEST_UNKNOWN {:errors [(assoc (:MANIFEST_UNKNOWN errors) :detail args)]}
+    :TAG_INVALID {:errors [(assoc (:TAG_INVALID errors) :detail args)]}
+    {}))
 
 (def json-pretty-printer (json/create-pretty-printer
                             { :indentation                  3
@@ -186,7 +195,7 @@
                   (-> (ring/response "")
                       (ring/status 201)))
                 (do
-                  (resp {:errors [(assoc-in (:BLOB_UNKNOWN errors) [:detail] {"Digest" digest})]} request :status 404))))))
+                  (resp (get-error-response :BLOB_UNKNOWN {"Digest" digest}) request :status 404))))))
 
 (defn head-blob
   "Check whether image (FS layer) exists."
@@ -207,7 +216,7 @@
                    (ring/header "Content-Length" size)
                    ; layers are already GZIP compressed!
                    (ring/header "Content-Encoding" "identity")))
-    (resp {:errors [(assoc-in (:BLOB_UNKNOWN errors) [:detail] {"Digest" digest})]} request :status 404)))
+    (resp (get-error-response :BLOB_UNKNOWN {"Digest" digest}) request :status 404)))
 
 (defn read-manifest
   "Read manifest JSON and throw 'Bad Request' if invalid"
@@ -272,7 +281,7 @@
                   (resp "tag not modified" request :status 201))))
             (do
               (log/warn "Prevented update of tag %s: %s" tag-ident (str e))
-              (resp {:errors [{:code "TAG_INVALID" :message "tag already exists"}]} request :status 409))))))))
+              (resp (get-error-response :TAG_INVALID {"Tag" name} request :status 409)))))))))
 
 (defn get-manifest
   "get"
@@ -292,7 +301,7 @@
           (set-header-fn)
           (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))
           ))
-      (resp {:errors [(assoc-in (:MANIFEST_UNKNOWN errors) [:detail] {"Parameters" parameters})]} request :status 404)))
+      (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))
 
 (defn list-tags
   "get"
