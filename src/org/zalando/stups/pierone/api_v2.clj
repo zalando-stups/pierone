@@ -2,7 +2,6 @@
   (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
             [org.zalando.stups.friboo.system.oauth2 :refer [resolve-access-token]]
             [org.zalando.stups.friboo.log :as log]
-            [org.zalando.stups.friboo.user :as u]
             [io.sarnowski.swagger1st.util.api :as api]
             [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
             [cheshire.core :as json]
@@ -16,28 +15,33 @@
             [org.zalando.stups.pierone.storage :as s])
   (:import (java.sql SQLException)
            (java.util UUID)
-           (java.io FileInputStream File)
+           (java.io File)
            (java.security MessageDigest)))
 
 ;; Docker Registry API v2
 ;;
-(def errors { :MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN" :message "manifest unknown" :detail {}}
-              :BLOB_UNKNOWN     {:code "BLOB_UNKNOWN" :message "blob unknown to registry" :detail {}}
-              :TAG_INVALID      {:code "TAG_INVALID" :message "tag already exists" :detail {}}})
+(def errors {:MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN"
+                                :message "manifest unknown"
+                                :detail {}}
+             :BLOB_UNKNOWN     {:code "BLOB_UNKNOWN"
+                                :message "blob unknown to registry"
+                                :detail {}}
+             :TAG_INVALID      {:code "TAG_INVALID"
+                                :message "tag already exists"
+                                :detail {}}})
 
-;{:errors [(assoc-in (:BLOB_UNKNOWN errors) [:detail] {"Digest" digest})]}
-(defn get-error-response [error-id args]
+(defn get-error-response [error-id error-detail]
   (condp = error-id
-    :BLOB_UNKNOWN {:errors [(assoc (:BLOB_UNKNOWN errors) :detail args)]}
-    :MANIFEST_UNKNOWN {:errors [(assoc (:MANIFEST_UNKNOWN errors) :detail args)]}
-    :TAG_INVALID {:errors [(assoc (:TAG_INVALID errors) :detail args)]}
+    :BLOB_UNKNOWN     {:errors [(assoc (:BLOB_UNKNOWN errors) :detail error-detail)]}
+    :MANIFEST_UNKNOWN {:errors [(assoc (:MANIFEST_UNKNOWN errors) :detail error-detail)]}
+    :TAG_INVALID      {:errors [(assoc (:TAG_INVALID errors) :detail error-detail)]}
     {}))
 
 (def json-pretty-printer (json/create-pretty-printer
-                            { :indentation                  3
-                              :object-field-value-separator ": "
-                              :indent-arrays?               true
-                              :indent-objects?              true}))
+                            {:indentation                  3
+                             :object-field-value-separator ": "
+                             :indent-arrays?               true
+                             :indent-objects?              true}))
 (defn- resp
   "Returns a response including various Docker headers set."
   [body request & {:keys [status binary?]
@@ -108,7 +112,7 @@
 
 (defn post-upload
   ""
-  [{:keys [team artifact]} request db _]
+  [{:keys [team artifact]} request _ _]
   (require-write-access team request)
   (let [uuid (UUID/randomUUID)]
        (-> (ring/response "")
@@ -182,10 +186,9 @@
 
 (defn put-upload
   "Commit FS layer blob"
-  [{:keys [team artifact uuid digest data]} request db storage]
+  [{:keys [team artifact digest]} request db _]
   (require-write-access team request)
-  (let [^File upload-file (get-upload-file storage team artifact uuid)
-        image-ident (str team "/" artifact "/" digest)]
+  (let [image-ident (str team "/" artifact "/" digest)]
        ; TODO: file might be uploaded on PUT too
 
        (let [updated-rows (sql/accept-image-blob! {:image digest} {:connection db})]
@@ -230,13 +233,14 @@
 
 (defn get-fs-layers
    [manifest]
-   (let [manifest-version (get manifest :schemaVersion)]
-   (if (= 1 manifest-version)
-      (map :blobSum (:fsLayers manifest ))
-      (if (= 2 manifest-version)
-          (apply conj [(get-in manifest [:config :digest])]
-                 (map :digest (:layers manifest)))
-          (api/throw-error 400 (str "manifest version not compatible with this API: " manifest-version))))))
+   (let [schema-version (:schemaVersion manifest)]
+     (condp = schema-version
+       1 (map :blobSum (:fsLayers manifest))
+       2 (apply conj
+                [(get-in manifest [:config :digest])]
+                (map :digest (:layers manifest)))
+       ; else
+       (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
@@ -293,13 +297,12 @@
   [parameters request db _]
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
     (let [parsed-manifest (json/decode manifest)
+          schema-version (get parsed-manifest "schemaVersion")
           pretty (json/encode parsed-manifest {:pretty json-pretty-printer})
-          schemaVersion (get parsed-manifest "schemaVersion")
-          set-header-fn (fn [response]
-                          (condp = schemaVersion
-                            1 (ring/content-type response "application/vnd.docker.distribution.manifest.v1+prettyjws")
-                            2 (ring/content-type response "application/vnd.docker.distribution.manifest.v2+json")
-                            response))]
+          set-header-fn #(condp = schema-version
+                          1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
+                          2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
+                          %)]
       (-> (resp pretty request)
           (set-header-fn)
           (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))))
