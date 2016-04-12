@@ -235,7 +235,7 @@
       (map :blobSum (:fsLayers manifest ))
       (if (= 2 manifest-version)
           (apply conj [(get-in manifest [:config :digest])]
-            (map :digest (:layers manifest)))
+                 (map :digest (:layers manifest)))
           (api/throw-error 400 (str "manifest version not compatible with this API: " manifest-version))))))
 
 (defn put-manifest
@@ -268,8 +268,10 @@
         (log/info "Stored new tag %s." tag-ident)
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
-              (str "sha256:" (digest/sha-256
-                (json/encode data {:pretty json-pretty-printer})))))
+                         (str "sha256:"
+                              (-> data
+                                  (json/encode {:pretty json-pretty-printer})
+                                  (digest/sha-256)))))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
@@ -294,16 +296,13 @@
           pretty (json/encode parsed-manifest {:pretty json-pretty-printer})
           schemaVersion (get parsed-manifest "schemaVersion")
           set-header-fn (fn [response]
-                          (cond
-                            (= 1 schemaVersion)
-                              (ring/content-type response "application/vnd.docker.distribution.manifest.v1+prettyjws")
-                            (= 2 schemaVersion)
-                              (ring/content-type response "application/vnd.docker.distribution.manifest.v2+json")
-                            :else response))]
+                          (condp = schemaVersion
+                            1 (ring/content-type response "application/vnd.docker.distribution.manifest.v1+prettyjws")
+                            2 (ring/content-type response "application/vnd.docker.distribution.manifest.v2+json")
+                            response))]
       (-> (resp pretty request)
           (set-header-fn)
-          (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))
-          ))
+          (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))))
       (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))
 
 (defn list-tags
