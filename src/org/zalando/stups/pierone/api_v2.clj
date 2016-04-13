@@ -290,7 +290,7 @@
                   (resp "tag not modified" request :status 201))))
             (do
               (log/warn "Prevented update of tag %s: %s" tag-ident (str e))
-              (resp (get-error-response :TAG_INVALID {"Tag" name} request :status 409)))))))))
+              (resp (get-error-response :TAG_INVALID {"Tag" name}) request :status 409))))))))
 
 (defn get-manifest
   "get"
