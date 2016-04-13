@@ -69,7 +69,7 @@ ORDER BY name
     AS (VALUES (:image)
          UNION
         SELECT img.i_parent_id
-          FROM images img, 
+          FROM images img,
                parents p
          WHERE img.i_id = p.i_id
            AND img.i_accepted = TRUE)

@@ -63,16 +63,6 @@
   (jdbc/delete! (:db system) :images ["i_id IS NOT NULL"])
   system)
 
-(defn delete-test-data
-  [system]
-  (doseq [tag d/all-tags]
-    (jdbc/delete! (:db system) :tags ["t_team = ? AND t_artifact = ? AND t_name = ?" (:team tag) (:artifact tag) (:name tag)])
-    (println "Deleted tag" (:team tag) "/" (:artifact tag) ":" (:name tag) "from old tests if existed."))
-  (doseq [image d/all-images]
-    (jdbc/delete! (:db system) :images ["i_id = ?" (:id image)])
-    (println "Deleted image" (:id image) "from old tests if existed."))
-  system)
-
 ; setup
 (defn setup
   "Starts Pierone."

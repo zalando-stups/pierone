@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.test :refer :all]
             [clj-http.client :as client]
+            [cheshire.core :refer :all :as json]
             [com.stuartsierra.component :as component]))
 
 (defn expect [status-code response]
@@ -14,16 +15,7 @@
 
 (deftest v2-test
   (let [system (u/setup)
-        data (.getBytes "imgdata")
-        ; echo -n 'imgdata' | sha256sum
-        digest "sha256:a5c741c7dea3a96944022b4b9a0b1480cfbeef5f4cc934850e8afacb48e18c5e"
-        invalid-manifest (.getBytes "stuff")
-        manifest (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"}]}")
-        manifest-bytes (.getBytes manifest)
-        ; manifest2 is simply a different manifest (we use the same FS layer twice, does not make sense, but works)
-        manifest2 (str "{\"fsLayers\":[{\"blobSum\":\"" digest "\"},{\"blobSum\":\"" digest "\"}]}")
-        manifest2-bytes (.getBytes manifest2)]
-
+        data (.getBytes "imgdata")]
     (u/wipe-db system)
 
     ; v2 compatibility check
@@ -32,7 +24,7 @@
       (is (= 200 (:status result))))
 
     (expect 404
-            (client/head (u/v2-url "/myteam/myart/blobs/" digest)
+            (client/head (u/v2-url "/myteam/myart/blobs/" (:digest d/manifest-v1))
                          (u/http-opts)))
 
     (expect 202
@@ -56,10 +48,10 @@
     (expect 201
             ; correct "digest" parameter
             (client/put (u/v2-url "/myteam/myart/blobs/uploads/myuuid")
-                        (merge (u/http-opts) {:query-params {"digest" digest}})))
+                        (merge (u/http-opts) {:query-params {"digest" (:digest d/manifest-v1)}})))
 
     (expect 200
-            (client/head (u/v2-url "/myteam/myart/blobs/" digest)
+            (client/head (u/v2-url "/myteam/myart/blobs/" (:digest d/manifest-v1))
                          (u/http-opts)))
 
     (expect 404
@@ -67,17 +59,23 @@
                         (u/http-opts)))
 
     (expect 400
+            ; not json
             (client/put (u/v2-url "/myteam/myart/manifests/1.0")
-                        (u/http-opts (io/input-stream invalid-manifest))))
+                        (u/http-opts (io/input-stream (.getBytes "invalid manifest")))))
 
-    (expect 200
+    (expect 400
+            ; invalid schema version
             (client/put (u/v2-url "/myteam/myart/manifests/1.0")
-                        (u/http-opts (io/input-stream manifest-bytes))))
+                        (u/http-opts (io/input-stream (:bytes d/manifest-v4)))))
 
-    ;(is (= manifest
-    ;       (expect 200
-    ;        (client/get (u/v2-url "/myteam/myart/manifests/1.0")
-    ;                    (u/http-opts)))))
+    (expect 201
+            (client/put (u/v2-url "/myteam/myart/manifests/1.0")
+                        (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
+
+    (is (= (:pretty d/manifest-v1)
+           (expect 200
+            (client/get (u/v2-url "/myteam/myart/manifests/1.0")
+                        (u/http-opts)))))
 
     (is (= "{\"name\":\"myteam/myart\",\"tags\":[\"1.0\"]}"
            (expect 200
@@ -95,33 +93,43 @@
                         (u/http-opts)))
 
     (expect 404
-            (client/get (u/v1-url "/images/" digest "/json")
+            (client/get (u/v1-url "/images/" (:digest d/manifest-v1) "/json")
                         (u/http-opts)))
 
     ; check that *-SNAPSHOT tags are mutable
-    (expect 200
+    (expect 201
             (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                        (u/http-opts (io/input-stream manifest-bytes))))
+                        (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
 
     ; works, no changes
-    (expect 200
+    (expect 201
             (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                        (u/http-opts (io/input-stream manifest-bytes))))
+                        (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
 
-    ;(is (= manifest
-    ;       (expect 200
-    ;        (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-    ;                    (u/http-opts)))))
+    (let [response (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
+                                (u/http-opts))]
+      (is (= "application/vnd.docker.distribution.manifest.v1+prettyjws"
+          (get-in response [:headers "Content-Type"]))))
 
     ; update, new manifest
-    (expect 200
+    (expect 201
             (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                        (u/http-opts (io/input-stream manifest2-bytes))))
+                        (u/http-opts (io/input-stream (:bytes d/manifest-v1-multilayer)))))
 
-    ;(is (= manifest2
-    ;       (expect 200
-    ;        (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-    ;                    (u/http-opts)))))
+    (is (= (:pretty d/manifest-v1-multilayer)
+           (expect 200
+            (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
+                        (u/http-opts)))))
+
+    (expect 201 (client/put (u/v2-url "/myteam/myart/manifests/2.0-SNAPSHOT")
+                                (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
+
+    (let [response (client/get (u/v2-url "/myteam/myart/manifests/2.0-SNAPSHOT")
+                                (u/http-opts))]
+
+      (is (= "application/vnd.docker.distribution.manifest.v2+json"
+             (get-in response [:headers "Content-Type"]))))
+
 
     ; stop
     (component/stop system)))

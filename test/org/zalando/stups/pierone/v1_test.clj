@@ -10,7 +10,7 @@
 (deftest v1-test
   (let [system (u/setup)]
 
-    (u/delete-test-data system)
+    (u/wipe-db system)
 
     ; ping
     (u/expect 200 (client/get (u/v1-url "/_ping")

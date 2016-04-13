@@ -11,7 +11,7 @@
         root (first d/images-hierarchy)
         alt (second d/images-hierarchy)]
 
-    (u/delete-test-data system)
+    (u/wipe-db system)
     (u/push-images d/images-hierarchy)
 
     ; tag root image as regular tag

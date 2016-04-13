@@ -231,6 +231,8 @@ paths:
       consumes:
         - application/octet-stream # Docker sucks
         - application/json
+        - application/vnd.docker.distribution.manifest.v2+json
+        - application/vnd.docker.distribution.manifest.v1+prettyjws
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
@@ -239,6 +241,7 @@ paths:
           in: body
           schema:
             description: "the manifest"
+            type: string
       responses:
         "200":
           description: OK

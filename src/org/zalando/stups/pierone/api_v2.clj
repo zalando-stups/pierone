@@ -2,23 +2,46 @@
   (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
             [org.zalando.stups.friboo.system.oauth2 :refer [resolve-access-token]]
             [org.zalando.stups.friboo.log :as log]
-            [org.zalando.stups.friboo.user :as u]
             [io.sarnowski.swagger1st.util.api :as api]
             [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
             [cheshire.core :as json]
+            [digest]
             [ring.util.response :as ring]
             [org.zalando.stups.pierone.sql :as sql]
             [clojure.java.io :as io]
+            [clojure.walk :as walk]
             [org.zalando.stups.friboo.ring :refer :all]
             [com.netflix.hystrix.core :refer [defcommand]]
             [org.zalando.stups.pierone.storage :as s])
   (:import (java.sql SQLException)
            (java.util UUID)
-           (java.io FileInputStream File)
+           (java.io File)
            (java.security MessageDigest)))
 
 ;; Docker Registry API v2
 ;;
+(def errors {:MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN"
+                                :message "manifest unknown"
+                                :detail {}}
+             :BLOB_UNKNOWN     {:code "BLOB_UNKNOWN"
+                                :message "blob unknown to registry"
+                                :detail {}}
+             :TAG_INVALID      {:code "TAG_INVALID"
+                                :message "tag already exists"
+                                :detail {}}})
+
+(defn get-error-response [error-id error-detail]
+  (condp = error-id
+    :BLOB_UNKNOWN     {:errors [(assoc (:BLOB_UNKNOWN errors) :detail error-detail)]}
+    :MANIFEST_UNKNOWN {:errors [(assoc (:MANIFEST_UNKNOWN errors) :detail error-detail)]}
+    :TAG_INVALID      {:errors [(assoc (:TAG_INVALID errors) :detail error-detail)]}
+    {}))
+
+(def json-pretty-printer (json/create-pretty-printer
+                            {:indentation                  3
+                             :object-field-value-separator ": "
+                             :indent-arrays?               true
+                             :indent-objects?              true}))
 (defn- resp
   "Returns a response including various Docker headers set."
   [body request & {:keys [status binary?]
@@ -89,7 +112,7 @@
 
 (defn post-upload
   ""
-  [{:keys [team artifact]} request db _]
+  [{:keys [team artifact]} request _ _]
   (require-write-access team request)
   (let [uuid (UUID/randomUUID)]
        (-> (ring/response "")
@@ -163,10 +186,9 @@
 
 (defn put-upload
   "Commit FS layer blob"
-  [{:keys [team artifact uuid digest data]} request db storage]
+  [{:keys [team artifact digest]} request db _]
   (require-write-access team request)
-  (let [^File upload-file (get-upload-file storage team artifact uuid)
-        image-ident (str team "/" artifact "/" digest)]
+  (let [image-ident (str team "/" artifact "/" digest)]
        ; TODO: file might be uploaded on PUT too
 
        (let [updated-rows (sql/accept-image-blob! {:image digest} {:connection db})]
@@ -176,7 +198,7 @@
                   (-> (ring/response "")
                       (ring/status 201)))
                 (do
-                  (resp "image not found" request :status 404))))))
+                  (resp (get-error-response :BLOB_UNKNOWN {"Digest" digest}) request :status 404))))))
 
 (defn head-blob
   "Check whether image (FS layer) exists."
@@ -197,19 +219,28 @@
                    (ring/header "Content-Length" size)
                    ; layers are already GZIP compressed!
                    (ring/header "Content-Encoding" "identity")))
-    (resp "image not found" request :status 404)))
+    (resp (get-error-response :BLOB_UNKNOWN {"Digest" digest}) request :status 404)))
 
 (defn read-manifest
   "Read manifest JSON and throw 'Bad Request' if invalid"
   [data]
-  (try
-    (json/parse-string (slurp data))
-    (catch Exception e
-      (api/throw-error 400 "invalid manifest JSON"))))
+  (if (map? data)
+    data
+    (try
+      (walk/keywordize-keys (json/parse-string (slurp data)))
+      (catch Exception e
+        (api/throw-error 400 (str data))))))
 
 (defn get-fs-layers
    [manifest]
-   (map #(get % "blobSum") (get manifest "fsLayers")))
+   (let [schema-version (:schemaVersion manifest)]
+     (condp = schema-version
+       1 (map :blobSum (:fsLayers manifest))
+       2 (apply conj
+                [(get-in manifest [:config :digest])]
+                (map :digest (:layers manifest)))
+       ; else
+       (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
@@ -239,7 +270,12 @@
       (try
         (sql/create-manifest! params-with-user connection)
         (log/info "Stored new tag %s." tag-ident)
-        (resp "OK" request)
+        (-> (resp "OK" request :status 201)
+            (ring/header "Docker-Content-Digest"
+                         (str "sha256:"
+                              (-> data
+                                  (json/encode {:pretty json-pretty-printer})
+                                  (digest/sha-256)))))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
@@ -248,20 +284,29 @@
               (if (pos? updated-rows)
                 (do
                   (log/info "Updated snapshot tag %s." tag-ident)
-                  (resp "OK" request))
+                  (resp "OK" request :status 201))
                 (do
                   (log/info "Did not update snapshot tag %s because image is the same." tag-ident)
-                  (resp "tag not modified" request))))
+                  (resp "tag not modified" request :status 201))))
             (do
               (log/warn "Prevented update of tag %s: %s" tag-ident (str e))
-              (resp {:errors [{:code "TAG_INVALID" :message "tag already exists"}]} request :status 409))))))))
+              (resp (get-error-response :TAG_INVALID {"Tag" name} request :status 409)))))))))
 
 (defn get-manifest
   "get"
   [parameters request db _]
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
-    (resp manifest request)
-    (resp "manifest not found" request :status 404)))
+    (let [parsed-manifest (json/decode manifest)
+          schema-version (get parsed-manifest "schemaVersion")
+          pretty (json/encode parsed-manifest {:pretty json-pretty-printer})
+          set-header-fn #(condp = schema-version
+                          1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
+                          2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
+                          %)]
+      (-> (resp pretty request)
+          (set-header-fn)
+          (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))))
+      (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))
 
 (defn list-tags
   "get"
@@ -274,4 +319,3 @@
   [_ request db _]
   (let [repos (map :name (sql/list-repositories {} {:connection db}))]
     (resp {:repositories repos} request)))
-
