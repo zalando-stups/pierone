@@ -75,7 +75,7 @@
     (expect 409
             ; duplicate tag
             (client/put (u/v2-url "/myteam/myart/manifests/1.0")
-                        (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
+                        (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
 
     (is (= (:pretty d/manifest-v1)
            (expect 200
