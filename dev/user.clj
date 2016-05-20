@@ -34,11 +34,19 @@
   development."
   nil)
 
+(defn slurp-if-exists [file]
+  (when (.exists (clojure.java.io/as-file file))
+    (slurp file)))
+
+(defn load-dev-config [file]
+  (clojure.edn/read-string (slurp-if-exists file)))
+
 (defn start
   "Starts the system running, sets the Var #'system."
   []
   (alter-var-root #'system
-                  (constantly (org.zalando.stups.pierone.core/run {:system-stups-log-level "DEBUG"}))))
+                  (constantly (org.zalando.stups.pierone.core/run (merge {:system-stups-log-level "DEBUG"}
+                                                                         (load-dev-config "./dev-config.edn"))))))
 
 (defn stop
   "Stops the system if it is currently running, updates the Var
