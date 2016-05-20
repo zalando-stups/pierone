@@ -13,7 +13,7 @@
   [default-configuration]
   (System/setProperty "hystrix.command.default.execution.timeout.enabled" "false")
   (let [configuration (config/load-configuration
-                        (system/default-http-namespaces-and :storage :db)
+                        (system/default-http-namespaces-and :storage :db :api)
                         [api/default-http-configuration
                          sql/default-db-configuration
                          storage/default-storage-configuration
@@ -23,7 +23,8 @@
                            storage/map->LocalStorage)
         system (system/http-system-map configuration
                                        api/map->API
-                                       [:storage :db]
+                                       [:storage :db :api-config]
+                                       :api-config (:api configuration)
                                        :storage (storage-engine {:configuration (:storage configuration)})
                                        :db      (sql/map->DB {:configuration (:db configuration)}))]
     (system/run configuration system)))

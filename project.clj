@@ -12,7 +12,9 @@
                  [cheshire "5.6.0"]
                  [digest "1.4.4"]
                  [org.apache.commons/commons-compress "1.10"]
-                 [org.clojure/data.codec "0.1.0"]]
+                 [org.clojure/data.codec "0.1.0"]
+                 [amazonica "0.3.57"]
+                 [org.clojure/java.jdbc "0.4.1"]]
 
   :main ^:skip-aot org.zalando.stups.pierone.core
   :uberjar-name "pierone.jar"
@@ -52,4 +54,4 @@
                        :dependencies [[org.clojure/tools.namespace "0.2.10"]
                                       [org.clojure/java.classpath "0.2.2"]
                                       [clj-http "2.0.0"]
-                                      [org.clojure/java.jdbc "0.4.1"]]}})
+                                      [midje "1.8.3"]]}})
