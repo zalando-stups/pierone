@@ -41,6 +41,14 @@ definitions:
       created_by:
         type: string
         example: hjacobs
+      image:
+        type: string
+      clair_id:
+        type: string
+      severity_fix_available:
+        type: string
+      severity_no_fix_available:
+        type: string
   TagInformation:
     type: object
     properties:
