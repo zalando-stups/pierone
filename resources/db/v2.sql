@@ -20,8 +20,8 @@ UPDATE images
 
 -- name: create-manifest!
 INSERT INTO tags
-       (t_team, t_artifact, t_name, t_manifest, t_image_id, t_fs_layers, t_created_by)
-VALUES (:team, :artifact, :name, :manifest, :image, ARRAY[ :fs_layers ], :user);
+       (t_team, t_artifact, t_name, t_manifest, t_image_id, t_fs_layers, t_created_by, t_clair_id)
+VALUES (:team, :artifact, :name, :manifest, :image, ARRAY[ :fs_layers ], :user, :clair_id);
 
 -- name: update-manifest!
 UPDATE tags

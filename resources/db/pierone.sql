@@ -13,7 +13,10 @@ SELECT t_artifact AS artifact
 SELECT t_name AS name,
        t_created AS created,
        t_created_by AS created_by,
-       t_image_id AS image
+       t_image_id AS image,
+       t_clair_id AS clair_id,
+       t_severity_fix_available AS severity_fix_available,
+       t_severity_no_fix_available AS severity_no_fix_available
   FROM tags
  WHERE t_team = :team
    AND t_artifact = :artifact

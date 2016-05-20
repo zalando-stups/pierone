@@ -12,7 +12,10 @@
             [clojure.walk :as walk]
             [org.zalando.stups.friboo.ring :refer :all]
             [com.netflix.hystrix.core :refer [defcommand]]
-            [org.zalando.stups.pierone.storage :as s])
+            [amazonica.aws.sqs :as sqs]
+            [org.zalando.stups.pierone.storage :as s]
+            [clojure.java.jdbc :as jdbc]
+            [clojure.string :as str])
   (:import (java.sql SQLException)
            (java.util UUID)
            (java.io File)
@@ -94,7 +97,7 @@
 
 (defn ping
   "Checks for compatibility with version 2."
-  [_ request _ _]
+  [_ request _ _ _]
   ; NOTE: we are doing our own OAuth check here as Docker requires an extra V2 header set
   (let [config (:configuration request)
         tokeninfo-url (:tokeninfo-url config)
@@ -112,7 +115,7 @@
 
 (defn post-upload
   ""
-  [{:keys [team artifact]} request _ _]
+  [{:keys [team artifact]} request _ _ _]
   (require-write-access team request)
   (let [uuid (UUID/randomUUID)]
        (-> (ring/response "")
@@ -170,7 +173,7 @@
 
 (defn patch-upload
   "Upload FS layer blob"
-  [{:keys [team artifact uuid data]} request db storage]
+  [{:keys [team artifact uuid data]} request db storage _]
   (require-write-access team request)
   (let [^File upload-file (get-upload-file storage team artifact uuid)]
        (io/copy data upload-file)
@@ -186,7 +189,7 @@
 
 (defn put-upload
   "Commit FS layer blob"
-  [{:keys [team artifact digest]} request db _]
+  [{:keys [team artifact digest]} request db _ _]
   (require-write-access team request)
   (let [image-ident (str team "/" artifact "/" digest)]
        ; TODO: file might be uploaded on PUT too
@@ -202,7 +205,7 @@
 
 (defn head-blob
   "Check whether image (FS layer) exists."
-  [{:keys [digest]} request db _]
+  [{:keys [digest]} request db _ _]
   (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
     (-> (resp "OK" request)
         (ring/header "Docker-Content-Digest" digest)
@@ -211,7 +214,7 @@
 
 (defn get-blob
   "Reads the binary data of an image."
-  [{:keys [digest]} request db storage]
+  [{:keys [digest]} request db storage _]
   (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
           (let [data (load-image storage digest)]
                (-> (resp data request :binary? true)
@@ -242,33 +245,95 @@
        ; else
        (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
 
+;; Returns the list of layer IDs, root at the end
+(defn get-layer-hashes-ordered
+  [manifest]
+  (let [schema-version (:schemaVersion manifest)]
+    (condp = schema-version
+      1 (map :blobSum (:fsLayers manifest))
+      2 (reverse (map :digest (:layers manifest)))
+      ; else
+      (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
+
+(defn remove-empty-layers [layers]
+  (remove #{"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"} layers))
+
+(defn tails [coll]
+  (if (empty? coll)
+    []
+    (lazy-seq (cons coll (tails (rest coll))))))
+
+(defn my-sha256 [data]
+  (str "sha256:" (digest/sha-256 data)))
+
+(defn calculate-clair-ids [layers]
+  (for [t (tails layers)]
+    {:original-id (first t)
+     :clair-id    (my-sha256 (apply str t))}))
+
+(defn figure-out-parents [layers]
+  (for [[parent current] (partition 2 1 (cons nil layers))]
+    {:parent parent :current current}))
+
+(defn prepare-hashes-for-clair [manifest]
+  (->> manifest
+       get-layer-hashes-ordered                             ; Root in the end
+       remove-empty-layers
+       calculate-clair-ids                                  ; {:clair-id "foo" :original-id "bar"}
+       reverse                                              ; Now root is in the beginning
+       figure-out-parents))                                 ; {:parent {...} :current {...}}
+
+(defn create-sqs-message [registry repository artifact {:keys [parent current]}]
+  {"Layer" {"Name"       (:clair-id current)
+            ;; TODO format 'https://$registry/v2/$repository/$artifact/blobs/$layer'
+            "Path"       (format "%s/v2/%s/%s/blobs/%s" registry repository artifact (:original-id current))
+            "ParentName" (:clair-id parent)
+            "Format"     "Docker"}})
+
+(defn send-sqs-message [queue-reqion queue-url message]
+  (sqs/send-message {:endpoint queue-reqion} :queue-url queue-url
+                    :message-body (json/generate-string message {:pretty true})))
+
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
-  [{:keys [team artifact name data]} request db _]
+  [{:keys [team artifact name data]} request db _ api-config]
   (require-write-access team request)
   (let [manifest (read-manifest data)
         connection {:connection db}
         uid (get-in request [:tokeninfo "uid"])
         fs-layers (get-fs-layers manifest)
+        clair-hashes (prepare-hashes-for-clair manifest)
+        topmost-layer-clair-id (-> clair-hashes last :current :clair-id)
+        ;; TODO get registry URL from config
+        registry (:callback-url api-config)
+        clair-sqs-messages (map (partial create-sqs-message registry team artifact) clair-hashes)
         digest (first fs-layers)
-        params-with-user {:team team
-                          :artifact artifact
-                          :name name
-                          :image digest
-                          :manifest (json/generate-string manifest {:pretty true})
-                          ;:manifest (json/generate-string manifest)
+        params-with-user {:team      team
+                          :artifact  artifact
+                          :name      name
+                          :image     digest
+                          :manifest  (json/generate-string manifest {:pretty true})
                           :fs_layers fs-layers
-                          :user uid}
+                          :user      uid}
         tag-ident (str team "/" artifact ":" name)]
     (when-not (seq fs-layers)
-              (api/throw-error 400 "manifest has no FS layers"))
+      (api/throw-error 400 "manifest has no FS layers"))
     (doseq [digest fs-layers]
-          (when-not (seq (sql/image-blob-exists {:image digest} {:connection db}))
-                    (api/throw-error 400 (str "image blob " digest " does not exist"))))
+      (when-not (seq (sql/image-blob-exists {:image digest} {:connection db}))
+        (api/throw-error 400 (str "image blob " digest " does not exist"))))
     (if (= "latest" name)
       (resp "tag latest is not allowed" request :status 409)
       (try
-        (sql/create-manifest! params-with-user connection)
+        ;; Wrap in a transaction together with putting SQS messages
+        (jdbc/with-db-transaction [tr db]
+          (sql/create-manifest! (merge params-with-user
+                                       {:clair_id  topmost-layer-clair-id})
+                                {:connection tr})
+          (let [queue-region (:clair-layer-push-queue-region api-config)
+                queue-url (:clair-layer-push-queue-url api-config)]
+            (when (and (not (str/blank? queue-region)) (not (str/blank? queue-url)))
+              (doseq [m clair-sqs-messages]
+                (send-sqs-message queue-region queue-url m)))))
         (log/info "Stored new tag %s." tag-ident)
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
@@ -294,7 +359,7 @@
 
 (defn get-manifest
   "get"
-  [parameters request db _]
+  [parameters request db _ _]
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
     (let [parsed-manifest (json/decode manifest)
           schema-version (get parsed-manifest "schemaVersion")
@@ -310,12 +375,12 @@
 
 (defn list-tags
   "get"
-  [{:keys [team artifact] :as parameters} request db _]
+  [{:keys [team artifact] :as parameters} request db _ _]
   (let [tags (map :name (sql/list-tag-names parameters {:connection db}))]
     (resp {:name (str team "/" artifact) :tags tags} request)))
 
 (defn list-repositories
   "get"
-  [_ request db _]
+  [_ request db _ _]
   (let [repos (map :name (sql/list-repositories {} {:connection db}))]
     (resp {:repositories repos} request)))
