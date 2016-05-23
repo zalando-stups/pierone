@@ -14,7 +14,8 @@
                  [org.apache.commons/commons-compress "1.10"]
                  [org.clojure/data.codec "0.1.0"]
                  [amazonica "0.3.57"]
-                 [org.clojure/java.jdbc "0.4.1"]]
+                 [org.clojure/java.jdbc "0.4.1"]
+                 [org.clojure/core.async "0.2.374"]]
 
   :main ^:skip-aot org.zalando.stups.pierone.core
   :uberjar-name "pierone.jar"

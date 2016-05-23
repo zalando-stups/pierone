@@ -265,7 +265,8 @@
                           :image     digest
                           :manifest  (json/generate-string manifest {:pretty true})
                           :fs_layers fs-layers
-                          :user      uid}
+                          :user      uid
+                          :clair_id  topmost-layer-clair-id}
         tag-ident (str team "/" artifact ":" name)]
     (when-not (seq fs-layers)
       (api/throw-error 400 "manifest has no FS layers"))
@@ -277,8 +278,7 @@
       (try
         ;; Wrap in a transaction together with putting SQS messages
         (jdbc/with-db-transaction [tr db]
-          (sql/create-manifest! (merge params-with-user
-                                       {:clair_id  topmost-layer-clair-id})
+          (sql/create-manifest! params-with-user
                                 {:connection tr})
           (let [queue-region (:clair-layer-push-queue-region api-config)
                 queue-url (:clair-layer-push-queue-url api-config)]

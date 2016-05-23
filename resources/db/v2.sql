@@ -30,6 +30,7 @@ UPDATE tags
        t_fs_layers = ARRAY[ :fs_layers ],
        -- updating is like overwriting (delete+create)
        -- i.e. update created timestamp and user
+       t_clair_id = :clair_id,
        t_created_by = :user,
        t_created = now()
  WHERE t_team = :team
