@@ -14,7 +14,7 @@
   (:body response))
 
 (deftest v2-test
-  (with-redefs [org.zalando.stups.pierone.api-v2/send-sqs-message (fn [& _])]
+  (with-redefs [org.zalando.stups.pierone.clair/send-sqs-message (fn [& _])]
     (let [system (u/setup)
           data (.getBytes "imgdata")]
       (u/wipe-db system)

@@ -5,7 +5,9 @@
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.pierone.api :as api]
             [org.zalando.stups.pierone.sql :as sql]
-            [org.zalando.stups.pierone.storage :as storage])
+            [org.zalando.stups.pierone.clair :as clair]
+            [org.zalando.stups.pierone.storage :as storage]
+            [com.stuartsierra.component :as component])
   (:gen-class))
 
 (defn run
@@ -25,6 +27,7 @@
                                        api/map->API
                                        [:storage :db :api-config]
                                        :api-config (:api configuration)
+                                       :clair-receiver (component/using (clair/make-clair-receiver) [:db :api-config])
                                        :storage (storage-engine {:configuration (:storage configuration)})
                                        :db      (sql/map->DB {:configuration (:db configuration)}))]
     (system/run configuration system)))

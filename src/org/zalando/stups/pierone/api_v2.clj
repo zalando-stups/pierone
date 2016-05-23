@@ -4,6 +4,7 @@
             [org.zalando.stups.friboo.log :as log]
             [io.sarnowski.swagger1st.util.api :as api]
             [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
+            [org.zalando.stups.pierone.clair :as clair]
             [cheshire.core :as json]
             [digest]
             [ring.util.response :as ring]
@@ -12,7 +13,6 @@
             [clojure.walk :as walk]
             [org.zalando.stups.friboo.ring :refer :all]
             [com.netflix.hystrix.core :refer [defcommand]]
-            [amazonica.aws.sqs :as sqs]
             [org.zalando.stups.pierone.storage :as s]
             [clojure.java.jdbc :as jdbc]
             [clojure.string :as str])
@@ -23,28 +23,28 @@
 
 ;; Docker Registry API v2
 ;;
-(def errors {:MANIFEST_UNKNOWN {:code "MANIFEST_UNKNOWN"
+(def errors {:MANIFEST_UNKNOWN {:code    "MANIFEST_UNKNOWN"
                                 :message "manifest unknown"
-                                :detail {}}
-             :BLOB_UNKNOWN     {:code "BLOB_UNKNOWN"
+                                :detail  {}}
+             :BLOB_UNKNOWN     {:code    "BLOB_UNKNOWN"
                                 :message "blob unknown to registry"
-                                :detail {}}
-             :TAG_INVALID      {:code "TAG_INVALID"
+                                :detail  {}}
+             :TAG_INVALID      {:code    "TAG_INVALID"
                                 :message "tag already exists"
-                                :detail {}}})
+                                :detail  {}}})
 
 (defn get-error-response [error-id error-detail]
   (condp = error-id
-    :BLOB_UNKNOWN     {:errors [(assoc (:BLOB_UNKNOWN errors) :detail error-detail)]}
+    :BLOB_UNKNOWN {:errors [(assoc (:BLOB_UNKNOWN errors) :detail error-detail)]}
     :MANIFEST_UNKNOWN {:errors [(assoc (:MANIFEST_UNKNOWN errors) :detail error-detail)]}
-    :TAG_INVALID      {:errors [(assoc (:TAG_INVALID errors) :detail error-detail)]}
+    :TAG_INVALID {:errors [(assoc (:TAG_INVALID errors) :detail error-detail)]}
     {}))
 
 (def json-pretty-printer (json/create-pretty-printer
-                            {:indentation                  3
-                             :object-field-value-separator ": "
-                             :indent-arrays?               true
-                             :indent-objects?              true}))
+                           {:indentation                  3
+                            :object-field-value-separator ": "
+                            :indent-arrays?               true
+                            :indent-objects?              true}))
 (defn- resp
   "Returns a response including various Docker headers set."
   [body request & {:keys [status binary?]
@@ -67,16 +67,16 @@
             (s/read-data storage image))
 
 (defn ping-unauthorized []
-    (-> (ring/response "Unauthorized")
-        (ring/status 401)
-        (ring/header "WWW-Authenticate" "Basic realm=\"Pier One Docker Registry\"")
-        ; IMPORTANT: we need to set the V2 header here (even for 401 status code!),
-        ; otherwise the Docker client will fallback to V1
-        (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
+  (-> (ring/response "Unauthorized")
+      (ring/status 401)
+      (ring/header "WWW-Authenticate" "Basic realm=\"Pier One Docker Registry\"")
+      ; IMPORTANT: we need to set the V2 header here (even for 401 status code!),
+      ; otherwise the Docker client will fallback to V1
+      (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
 
 (defn ping-ok []
-    (-> (ring/response "OK")
-        (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
+  (-> (ring/response "OK")
+      (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
 
 ; TODO: this function was copied from Swagger1st library
 ; because the function is not public there :-(
@@ -102,26 +102,26 @@
   (let [config (:configuration request)
         tokeninfo-url (:tokeninfo-url config)
         allow-public-read (:allow-public-read config)]
-       (if (and tokeninfo-url (or (not allow-public-read) (is-write-domain request)))
-           (if-let [access-token (extract-access-token request)]
-                   ; check access token
-                   (if-let [tokeninfo (resolve-access-token tokeninfo-url access-token)]
-                           (ping-ok)
-                           (ping-unauthorized))
-                   ; missing access token
-                   (ping-unauthorized))
-           ; no tokeninfo URL => no security checks
-           (ping-ok))))
+    (if (and tokeninfo-url (or (not allow-public-read) (is-write-domain request)))
+      (if-let [access-token (extract-access-token request)]
+        ; check access token
+        (if-let [tokeninfo (resolve-access-token tokeninfo-url access-token)]
+          (ping-ok)
+          (ping-unauthorized))
+        ; missing access token
+        (ping-unauthorized))
+      ; no tokeninfo URL => no security checks
+      (ping-ok))))
 
 (defn post-upload
   ""
   [{:keys [team artifact]} request _ _ _]
   (require-write-access team request)
   (let [uuid (UUID/randomUUID)]
-       (-> (ring/response "")
-           (ring/status 202)
-           (ring/header "Location" (str "/v2/" team "/" artifact "/blobs/uploads/" uuid))
-           (ring/header "Docker-Upload-UUID" uuid))))
+    (-> (ring/response "")
+        (ring/status 202)
+        (ring/header "Location" (str "/v2/" team "/" artifact "/blobs/uploads/" uuid))
+        (ring/header "Docker-Upload-UUID" uuid))))
 
 (defn get-upload-file [storage team artifact uuid]
   (let [^File dir (io/file (:directory storage) "uploads" team artifact)]
@@ -141,67 +141,67 @@
         prefix (.replaceAll (.toLowerCase algorithm) "-" "")
         bufsize 16384
         md (MessageDigest/getInstance algorithm)]
-       (with-open [in (io/input-stream file)]
-                  (let [ba (byte-array bufsize)]
-                  (loop [n (.read in ba 0 bufsize)]
-                        (when (> n 0)
-                              (.update md ba 0 n)
-                              (recur (.read in ba 0 bufsize))))))
-       (str prefix ":" (hexify (.digest md)))))
+    (with-open [in (io/input-stream file)]
+      (let [ba (byte-array bufsize)]
+        (loop [n (.read in ba 0 bufsize)]
+          (when (> n 0)
+            (.update md ba 0 n)
+            (recur (.read in ba 0 bufsize))))))
+    (str prefix ":" (hexify (.digest md)))))
 
 (defn create-image [team artifact digest upload-file request db storage]
   (let [image-ident (str team "/" artifact "/" digest)]
-       (try
-            (sql/create-image-blob!
-             {:image    digest
-              :size     (.length upload-file)
-              :user     (get-in request [:tokeninfo "uid"])}
-             {:connection db})
-            (catch SQLException e
-                   (if (seq (sql/image-blob-exists {:image digest} {:connection db}))
-                       (log/info "Image already exists: %s" image-ident)
-                       (throw e))))
-       (store-image storage digest upload-file)
-       (when-let [scm-source (v1/get-scm-source-data upload-file)]
-                 (log/info "Found scm-source.json in image %s: %s" image-ident scm-source)
-                 (try
-                      (sql/create-scm-source-data! (assoc scm-source :image digest) {:connection db})
-                      (catch SQLException e
-                             (when-not (seq (sql/image-blob-exists {:image digest} {:connection db}))
-                                       (throw e)))))
-       (log/info "Stored new image %s." image-ident)))
+    (try
+      (sql/create-image-blob!
+        {:image digest
+         :size  (.length upload-file)
+         :user  (get-in request [:tokeninfo "uid"])}
+        {:connection db})
+      (catch SQLException e
+        (if (seq (sql/image-blob-exists {:image digest} {:connection db}))
+          (log/info "Image already exists: %s" image-ident)
+          (throw e))))
+    (store-image storage digest upload-file)
+    (when-let [scm-source (v1/get-scm-source-data upload-file)]
+      (log/info "Found scm-source.json in image %s: %s" image-ident scm-source)
+      (try
+        (sql/create-scm-source-data! (assoc scm-source :image digest) {:connection db})
+        (catch SQLException e
+          (when-not (seq (sql/image-blob-exists {:image digest} {:connection db}))
+            (throw e)))))
+    (log/info "Stored new image %s." image-ident)))
 
 (defn patch-upload
   "Upload FS layer blob"
   [{:keys [team artifact uuid data]} request db storage _]
   (require-write-access team request)
   (let [^File upload-file (get-upload-file storage team artifact uuid)]
-       (io/copy data upload-file)
-       (let [digest (compute-digest upload-file)
-             size   (.length upload-file)]
-            (create-image team artifact digest upload-file request db storage)
-            (io/delete-file upload-file true)
-            (-> (ring/response "")
-                (ring/status 202)
-                (ring/header "Docker-Upload-UUID" uuid)
-                ; is Docker really expecting an invalid Range header here?
-                (ring/header "Range" (str "0-" (- size 1)))))))
+    (io/copy data upload-file)
+    (let [digest (compute-digest upload-file)
+          size (.length upload-file)]
+      (create-image team artifact digest upload-file request db storage)
+      (io/delete-file upload-file true)
+      (-> (ring/response "")
+          (ring/status 202)
+          (ring/header "Docker-Upload-UUID" uuid)
+          ; is Docker really expecting an invalid Range header here?
+          (ring/header "Range" (str "0-" (- size 1)))))))
 
 (defn put-upload
   "Commit FS layer blob"
   [{:keys [team artifact digest]} request db _ _]
   (require-write-access team request)
   (let [image-ident (str team "/" artifact "/" digest)]
-       ; TODO: file might be uploaded on PUT too
+    ; TODO: file might be uploaded on PUT too
 
-       (let [updated-rows (sql/accept-image-blob! {:image digest} {:connection db})]
-            (if (pos? updated-rows)
-                (do
-                  (log/info "Accepted image %s." image-ident)
-                  (-> (ring/response "")
-                      (ring/status 201)))
-                (do
-                  (resp (get-error-response :BLOB_UNKNOWN {"Digest" digest}) request :status 404))))))
+    (let [updated-rows (sql/accept-image-blob! {:image digest} {:connection db})]
+      (if (pos? updated-rows)
+        (do
+          (log/info "Accepted image %s." image-ident)
+          (-> (ring/response "")
+              (ring/status 201)))
+        (do
+          (resp (get-error-response :BLOB_UNKNOWN {"Digest" digest}) request :status 404))))))
 
 (defn head-blob
   "Check whether image (FS layer) exists."
@@ -216,12 +216,12 @@
   "Reads the binary data of an image."
   [{:keys [digest]} request db storage _]
   (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
-          (let [data (load-image storage digest)]
-               (-> (resp data request :binary? true)
-                   (ring/header "Docker-Content-Digest" digest)
-                   (ring/header "Content-Length" size)
-                   ; layers are already GZIP compressed!
-                   (ring/header "Content-Encoding" "identity")))
+    (let [data (load-image storage digest)]
+      (-> (resp data request :binary? true)
+          (ring/header "Docker-Content-Digest" digest)
+          (ring/header "Content-Length" size)
+          ; layers are already GZIP compressed!
+          (ring/header "Content-Encoding" "identity")))
     (resp (get-error-response :BLOB_UNKNOWN {"Digest" digest}) request :status 404)))
 
 (defn read-manifest
@@ -235,64 +235,15 @@
         (api/throw-error 400 (str data))))))
 
 (defn get-fs-layers
-   [manifest]
-   (let [schema-version (:schemaVersion manifest)]
-     (condp = schema-version
-       1 (map :blobSum (:fsLayers manifest))
-       2 (apply conj
-                [(get-in manifest [:config :digest])]
-                (map :digest (:layers manifest)))
-       ; else
-       (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
-
-;; Returns the list of layer IDs, root at the end
-(defn get-layer-hashes-ordered
   [manifest]
   (let [schema-version (:schemaVersion manifest)]
     (condp = schema-version
       1 (map :blobSum (:fsLayers manifest))
-      2 (reverse (map :digest (:layers manifest)))
+      2 (apply conj
+               [(get-in manifest [:config :digest])]
+               (map :digest (:layers manifest)))
       ; else
       (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
-
-(defn remove-empty-layers [layers]
-  (remove #{"sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"} layers))
-
-(defn tails [coll]
-  (if (empty? coll)
-    []
-    (lazy-seq (cons coll (tails (rest coll))))))
-
-(defn my-sha256 [data]
-  (str "sha256:" (digest/sha-256 data)))
-
-(defn calculate-clair-ids [layers]
-  (for [t (tails layers)]
-    {:original-id (first t)
-     :clair-id    (my-sha256 (apply str t))}))
-
-(defn figure-out-parents [layers]
-  (for [[parent current] (partition 2 1 (cons nil layers))]
-    {:parent parent :current current}))
-
-(defn prepare-hashes-for-clair [manifest]
-  (->> manifest
-       get-layer-hashes-ordered                             ; Root in the end
-       remove-empty-layers
-       calculate-clair-ids                                  ; {:clair-id "foo" :original-id "bar"}
-       reverse                                              ; Now root is in the beginning
-       figure-out-parents))                                 ; {:parent {...} :current {...}}
-
-(defn create-sqs-message [registry repository artifact {:keys [parent current]}]
-  {"Layer" {"Name"       (:clair-id current)
-            ;; TODO format 'https://$registry/v2/$repository/$artifact/blobs/$layer'
-            "Path"       (format "%s/v2/%s/%s/blobs/%s" registry repository artifact (:original-id current))
-            "ParentName" (:clair-id parent)
-            "Format"     "Docker"}})
-
-(defn send-sqs-message [queue-reqion queue-url message]
-  (sqs/send-message {:endpoint queue-reqion} :queue-url queue-url
-                    :message-body (json/generate-string message {:pretty true})))
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
@@ -302,11 +253,11 @@
         connection {:connection db}
         uid (get-in request [:tokeninfo "uid"])
         fs-layers (get-fs-layers manifest)
-        clair-hashes (prepare-hashes-for-clair manifest)
+        clair-hashes (clair/prepare-hashes-for-clair manifest)
         topmost-layer-clair-id (-> clair-hashes last :current :clair-id)
         ;; TODO get registry URL from config
         registry (:callback-url api-config)
-        clair-sqs-messages (map (partial create-sqs-message registry team artifact) clair-hashes)
+        clair-sqs-messages (map (partial clair/create-sqs-message registry team artifact) clair-hashes)
         digest (first fs-layers)
         params-with-user {:team      team
                           :artifact  artifact
@@ -314,7 +265,8 @@
                           :image     digest
                           :manifest  (json/generate-string manifest {:pretty true})
                           :fs_layers fs-layers
-                          :user      uid}
+                          :user      uid
+                          :clair_id  topmost-layer-clair-id}
         tag-ident (str team "/" artifact ":" name)]
     (when-not (seq fs-layers)
       (api/throw-error 400 "manifest has no FS layers"))
@@ -326,14 +278,12 @@
       (try
         ;; Wrap in a transaction together with putting SQS messages
         (jdbc/with-db-transaction [tr db]
-          (sql/create-manifest! (merge params-with-user
-                                       {:clair_id  topmost-layer-clair-id})
+          (sql/create-manifest! params-with-user
                                 {:connection tr})
           (let [queue-region (:clair-layer-push-queue-region api-config)
                 queue-url (:clair-layer-push-queue-url api-config)]
             (when (and (not (str/blank? queue-region)) (not (str/blank? queue-url)))
-              (doseq [m clair-sqs-messages]
-                (send-sqs-message queue-region queue-url m)))))
+              (clair/send-sqs-message queue-region queue-url clair-sqs-messages))))
         (log/info "Stored new tag %s." tag-ident)
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
@@ -371,7 +321,7 @@
       (-> (resp pretty request)
           (set-header-fn)
           (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))))
-      (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))
+    (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))
 
 (defn list-tags
   "get"

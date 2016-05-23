@@ -78,3 +78,9 @@ ORDER BY created DESC
 SELECT SUM(i_size) AS total
   FROM images
  WHERE i_accepted IS TRUE;
+
+-- name: update-tag-severity!
+UPDATE tags
+   SET t_severity_fix_available = :severity_fix_available,
+       t_severity_no_fix_available = :severity_no_fix_available
+ WHERE t_clair_id = :clair_id;
