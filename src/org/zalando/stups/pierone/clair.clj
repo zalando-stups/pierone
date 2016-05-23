@@ -44,7 +44,6 @@
 
 (defn create-sqs-message [registry repository artifact {:keys [parent current]}]
   {"Layer" {"Name"       (:clair-id current)
-            ;; TODO format 'https://$registry/v2/$repository/$artifact/blobs/$layer'
             "Path"       (format "%s/v2/%s/%s/blobs/%s" registry repository artifact (:original-id current))
             "ParentName" (:clair-id parent)
             "Format"     "Docker"}})
