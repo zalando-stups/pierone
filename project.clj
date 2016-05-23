@@ -44,10 +44,6 @@
 
   :profiles {:uberjar {:aot :all}
 
-             :test    {:dependencies [[clj-http "2.0.0"]
-                                      [digest "1.4.4"]
-                                      [org.clojure/java.jdbc "0.4.1"]]}
-
              :dev     {:repl-options {:init-ns user}
                        :source-paths ["dev"]
                        :jvm-opts ["-Dhystrix.threadpool.default.coreSize=50"]
