@@ -11,3 +11,7 @@ approvals:
       - zalando
     # OR a collaborator of the repo
     collaborators: true
+commit:
+  message:
+    patterns: # commit message has to match any one of
+      - ".+" # Any non-empty message
