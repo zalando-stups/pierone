@@ -53,8 +53,8 @@
             "ParentName" (:clair-id parent)
             "Format"     "Docker"}})
 
-(defn send-sqs-message [queue-reqion queue-url message]
-  (sqs/send-message {:endpoint queue-reqion} :queue-url queue-url
+(defn send-sqs-message [queue-region queue-url message]
+  (sqs/send-message {:endpoint queue-region} :queue-url queue-url
                     :message-body (json/generate-string message {:pretty true})))
 
 (def severity-names
@@ -98,14 +98,14 @@
                              :severity_fix_available    severity-fix-available
                              :severity_no_fix_available severity-no-fix-available} {:connection db}))
 
-(defn processor-thread-fn [{:keys [clair-check-result-queue-url clair-check-result-queue-reqion]} db receive-ch]
+(defn processor-thread-fn [{:keys [clair-check-result-queue-url clair-check-result-queue-region]} db receive-ch]
   (loop []
     (when-let [message (<!! receive-ch)]
       (try
         (let [[layer receipt-handle] (extract-clair-layer message)
               summary (process-clair-layer layer)]
           (store-clair-summary db summary)
-          (sqs/delete-message {:endpoint clair-check-result-queue-reqion}
+          (sqs/delete-message {:endpoint clair-check-result-queue-region}
                               :queue-url clair-check-result-queue-url :receipt-handle receipt-handle)
           (log/info "Updated layer severity info: %s" summary))
         (catch Exception e
@@ -113,21 +113,21 @@
       (recur)))
   (log/debug "Stopping processor thread."))
 
-(defn read-sqs-message [queue-reqion queue-url]
+(defn read-sqs-message [queue-region queue-url]
   (try
-    (sqs/receive-message {:endpoint queue-reqion} :queue-url queue-url :wait-time-seconds 20)
+    (sqs/receive-message {:endpoint queue-region} :queue-url queue-url :wait-time-seconds 20)
     (catch Exception e
-      (log/error e "Error caught during queue polling. %s" {:queue-region queue-reqion :queue-url queue-url})
+      (log/error e "Error caught during queue polling. %s" {:queue-region queue-region :queue-url queue-url})
       (Thread/sleep 5000)
       {:messages []})))
 
 ;; Creates a channel and returns it
 ;; In the background gets messages from the queue in batches and puts them one by one into the channel
-(defn sqs-receive-chan [stop-ch queue-reqion queue-url]
+(defn sqs-receive-chan [stop-ch queue-region queue-url]
   (let [out-ch (chan)]
     (thread
       (loop []
-        (let [[messages _] (alts!! [stop-ch (go (read-sqs-message queue-reqion queue-url))])]
+        (let [[messages _] (alts!! [stop-ch (go (read-sqs-message queue-region queue-url))])]
           (if-not messages
             (close! out-ch)
             (do
@@ -137,11 +137,11 @@
       (log/debug "Stopping receiver thread."))
     out-ch))
 
-(defn start-receiver [{:keys [clair-check-result-queue-reqion clair-check-result-queue-url] :as api-config} db]
-  (if (some str/blank? [clair-check-result-queue-reqion clair-check-result-queue-url])
+(defn start-receiver [{:keys [clair-check-result-queue-region clair-check-result-queue-url] :as api-config} db]
+  (if (some str/blank? [clair-check-result-queue-region clair-check-result-queue-url])
     (log/warn "No API_CLAIR_CHECK_RESULT_QUEUE_REGION or API_CLAIR_CHECK_RESULT_QUEUE_URL, not starting ClairReceiver.")
     (let [stop-ch (chan)
-          receive-ch (sqs-receive-chan stop-ch clair-check-result-queue-reqion clair-check-result-queue-url)]
+          receive-ch (sqs-receive-chan stop-ch clair-check-result-queue-region clair-check-result-queue-url)]
       (log/info "Starting ClairReceiver")
       (thread (processor-thread-fn api-config db receive-ch))
       stop-ch)))
