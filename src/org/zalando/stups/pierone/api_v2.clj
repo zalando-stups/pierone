@@ -282,8 +282,11 @@
                                 {:connection tr})
           (let [queue-region (:clair-layer-push-queue-region api-config)
                 queue-url (:clair-layer-push-queue-url api-config)]
-            (when (and (not (str/blank? queue-region)) (not (str/blank? queue-url)))
-              (clair/send-sqs-message queue-region queue-url clair-sqs-messages))))
+            (if (some str/blank? [queue-region queue-url])
+              (log/warn "No API_CLAIR_PUSH_LAYER_QUEUE_REGION or API_CLAIR_PUSH_LAYER_QUEUE_URL, not submitting to Clair.")
+              (do
+                (log/info "Submitting image to Clair: %s" topmost-layer-clair-id)
+                (clair/send-sqs-message queue-region queue-url clair-sqs-messages)))))
         (log/info "Stored new tag %s." tag-ident)
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
