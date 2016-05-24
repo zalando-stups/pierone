@@ -138,20 +138,21 @@
     out-ch))
 
 (defn start-receiver [{:keys [clair-check-result-queue-reqion clair-check-result-queue-url] :as api-config} db]
-  (when (and (not (str/blank? clair-check-result-queue-reqion)) (not (str/blank? clair-check-result-queue-url)))
+  (if (some str/blank? [clair-check-result-queue-reqion clair-check-result-queue-url])
+    (log/warn "No API_CLAIR_CHECK_RESULT_QUEUE_REGION or API_CLAIR_CHECK_RESULT_QUEUE_URL, not starting ClairReceiver.")
     (let [stop-ch (chan)
           receive-ch (sqs-receive-chan stop-ch clair-check-result-queue-reqion clair-check-result-queue-url)]
+      (log/info "Starting ClairReceiver")
       (thread (processor-thread-fn api-config db receive-ch))
       stop-ch)))
 
 (defrecord ClairReceiver [api-config db stop-ch]
   component/Lifecycle
   (start [this]
-    (log/debug "Starting Receiver")
     (assoc this :stop-ch (start-receiver api-config db)))
   (stop [this]
-    (log/debug "Stopping Receiver")
     (when stop-ch
+      (log/info "Stopping ClairReceiver")
       (close! stop-ch))
     this))
 
