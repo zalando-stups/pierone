@@ -7,7 +7,10 @@
             [clojure.core.async :as a :refer [chan go alts!! <!! >!! thread close! go-loop]]
             [org.zalando.stups.pierone.sql :as sql]
             [org.zalando.stups.friboo.log :as log]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.java.io :as io]
+            [clojure.data.codec.base64 :as b64])
+  (:import (java.util.zip GZIPInputStream)))
 
 (defn tails [coll]
   (if (empty? coll)
@@ -69,29 +72,40 @@
        (sort-by severity-rating)
        first))
 
+(defn decode-base64gzip [base64gzipped-str]
+  (slurp (GZIPInputStream. (io/input-stream (b64/decode (.getBytes base64gzipped-str))))))
+
+(defn decode-message [message content-type]
+  (case content-type
+    "application/base64gzip" (decode-base64gzip message)
+    "application/json" message
+    nil message                                             ; fallback for old version, assume json
+    (do
+      (log/warn "Cannot decode Clair message, unknown content-type %s" content-type)
+      nil)))
+
+;; Returns layer
+(defn extract-clair-layer [body]
+  (let [{:strs [Message MessageAttributes]} (json/parse-string body)
+        content-type (get-in MessageAttributes ["CLAIR.CONTENTTYPE" "Value"])]
+    (when-let [decoded-message (decode-message Message content-type)]
+      (let [{:strs [Layer]} (json/parse-string decoded-message)]
+        Layer))))
+
 ;; Returns summary
 (defn process-clair-layer [{:strs [Name Features]}]
   (if (empty? Features)
     {:clair-id                  Name
      :severity-fix-available    "clair:CouldntFigureOut"
      :severity-no-fix-available "clair:CouldntFigureOut"}
-    (if-let [features-with-vulnerabilities (seq (filter #(get % "Vulnerabilities") Features))]
-      (let [vulnerabilities (for [{:strs [Vulnerabilities]} features-with-vulnerabilities
-                                  v Vulnerabilities]
-                              v)
-            {noFixAvailable false fixAvailable true} (group-by #(contains? % "FixedBy") vulnerabilities)]
-        {:clair-id                  Name
-         :severity-fix-available    (find-highest-severity fixAvailable)
-         :severity-no-fix-available (find-highest-severity noFixAvailable)})
+    (let [features-with-vulnerabilities (seq (filter #(get % "Vulnerabilities") Features))
+          vulnerabilities (for [{:strs [Vulnerabilities]} features-with-vulnerabilities
+                                v Vulnerabilities]
+                            v)
+          {noFixAvailable false fixAvailable true} (group-by #(contains? % "FixedBy") vulnerabilities)]
       {:clair-id                  Name
-       :severity-fix-available    "clair:NoCVEsFound"
-       :severity-no-fix-available "clair:NoCVEsFound"})))
-
-;; Returns layer
-(defn extract-clair-layer [{:keys [body receipt-handle]}]
-  (let [{:strs [Message]} (json/parse-string body)
-        {:strs [Layer]} (json/parse-string Message)]
-    [Layer receipt-handle]))
+       :severity-fix-available    (or (find-highest-severity fixAvailable) "clair:NoCVEsFound")
+       :severity-no-fix-available (or (find-highest-severity noFixAvailable) "clair:NoCVEsFound")})))
 
 (defn store-clair-summary [db {:keys [clair-id severity-fix-available severity-no-fix-available]}]
   (sql/update-tag-severity! {:clair_id                  clair-id
@@ -100,16 +114,16 @@
 
 (defn processor-thread-fn [{:keys [clair-check-result-queue-url clair-check-result-queue-region]} db receive-ch]
   (loop []
-    (when-let [message (<!! receive-ch)]
+    (when-let [{:keys [body receipt-handle]} (<!! receive-ch)]
       (try
-        (let [[layer receipt-handle] (extract-clair-layer message)
-              summary (process-clair-layer layer)]
-          (store-clair-summary db summary)
-          (sqs/delete-message {:endpoint clair-check-result-queue-region}
-                              :queue-url clair-check-result-queue-url :receipt-handle receipt-handle)
-          (log/info "Updated layer severity info: %s" summary))
+        (when-let [layer (extract-clair-layer body)]
+          (let [summary (process-clair-layer layer)]
+            (store-clair-summary db summary)
+            (sqs/delete-message {:endpoint clair-check-result-queue-region}
+                                :queue-url clair-check-result-queue-url :receipt-handle receipt-handle)
+            (log/info "Updated layer severity info: %s" summary)))
         (catch Exception e
-          (log/error e "Error caught during queue processing. %s" {:message message})))
+          (log/error e "Error caught during queue processing. %s" {:message body})))
       (recur)))
   (log/debug "Stopping processor thread."))
 
