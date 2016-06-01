@@ -73,7 +73,7 @@
 
   (facts "decode-base64gzip"
     (decode-base64gzip "H4sIANmfTVcAA/NIzcnJBwCCidH3BQAAAA==") => "Hello"
-    (decode-base64gzip "H4sIAAufTVcAA/NIzcnJ5wIAFjWWMQYA") => (throws EOFException))
+    (decode-base64gzip "H4sIAAufTVcAA/NIzcnJ5wIAFjWWMQYA") => (throws ExceptionInfo "Cannot decode base64gzip message."))
 
   (facts "decode-message"
     (decode-message "H4sIANmfTVcAA/NIzcnJBwCCidH3BQAAAA==" "application/base64gzip") => "Hello"
@@ -99,7 +99,12 @@
            \"Message\" : \"foo\",
            \"MessageAttributes\" : {
              \"CLAIR.CONTENTTYPE\" : {\"Value\":\"unknown/content\"}}}")
-    => nil)
+    => nil
+    (extract-clair-layer "{
+           \"Message\" : \"H4sIAAufTVcAA/NIzcnJ5wIAFjWWMQYA\",
+           \"MessageAttributes\" : {
+             \"CLAIR.CONTENTTYPE\" : {\"Value\":\"application/base64gzip\"}}}")
+    => (throws ExceptionInfo "Cannot decode base64gzip message."))
 
   (facts "process-clair-layer"
     (process-clair-layer {"Name" "foo"})
@@ -117,19 +122,36 @@
     => {:clair-id "foo" :severity-fix-available "Low" :severity-no-fix-available "Low"})
 
   (facts "processor-thread-fn"
-    (processor-thread-fn ..config.. ..db.. (a/to-chan [{:body ..body1.. :receipt-handle ..rh1..}
-                                                       {:body ..body2.. :receipt-handle ..rh2..}])) => anything
-    (provided
-      ..config.. =contains=> {:clair-check-result-queue-url    ..queue-url..
-                              :clair-check-result-queue-region ..queue-region..}
-      (extract-clair-layer ..body1..) => ..layer1..
-      (extract-clair-layer ..body2..) => ..layer2..
-      (process-clair-layer ..layer1..) => ..summary1..
-      (process-clair-layer ..layer2..) => ..summary2..
-      (store-clair-summary ..db.. ..summary1..) => anything
-      (store-clair-summary ..db.. ..summary2..) => anything
-      (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh1..) => anything
-      (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh2..) => anything))
+    (fact "happy path, processes messages from the channel one by one"
+      (processor-thread-fn ..config.. ..db.. (a/to-chan [{:body ..body1.. :receipt-handle ..rh1..}
+                                                         {:body ..body2.. :receipt-handle ..rh2..}])) => anything
+      (provided
+        ..config.. =contains=> {:clair-check-result-queue-url    ..queue-url..
+                                :clair-check-result-queue-region ..queue-region..}
+        (extract-clair-layer ..body1..) => ..layer1..
+        (extract-clair-layer ..body2..) => ..layer2..
+        (process-clair-layer ..layer1..) => ..summary1..
+        (process-clair-layer ..layer2..) => ..summary2..
+        (store-clair-summary ..db.. ..summary1..) => anything
+        (store-clair-summary ..db.. ..summary2..) => anything
+        (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh1..) => anything
+        (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh2..) => anything))
+    (fact "message parse error, nothing should be stored, message should be deleted"
+      (processor-thread-fn ..config.. ..db.. (a/to-chan [{:body ..body1.. :receipt-handle ..rh1..}])) => anything
+      (provided
+        ..config.. =contains=> {:clair-check-result-queue-url    ..queue-url..
+                                :clair-check-result-queue-region ..queue-region..}
+        (extract-clair-layer ..body1..) =throws=> (ex-info "Cannot decode base64gzip message." {})
+        (store-clair-summary anything anything) => anything :times 0
+        (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh1..) => anything))
+    (fact "Some other error, nothing should be stored, message should not be deleted"
+      (processor-thread-fn ..config.. ..db.. (a/to-chan [{:body ..body1.. :receipt-handle ..rh1..}])) => anything
+      (provided
+        ..config.. =contains=> {:clair-check-result-queue-url    ..queue-url..
+                                :clair-check-result-queue-region ..queue-region..}
+        (extract-clair-layer ..body1..) =throws=> (Exception. "Bad thing happened")
+        (store-clair-summary anything anything) => anything :times 0
+        (sqs/delete-message anything :queue-url anything :receipt-handle anything) => anything :times 0)))
 
   )
 

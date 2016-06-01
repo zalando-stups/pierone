@@ -10,7 +10,9 @@
             [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.data.codec.base64 :as b64])
-  (:import (java.util.zip GZIPInputStream)))
+  (:import (java.util.zip GZIPInputStream)
+           (java.io EOFException)
+           (clojure.lang ExceptionInfo)))
 
 (defn tails [coll]
   (if (empty? coll)
@@ -73,7 +75,10 @@
        first))
 
 (defn decode-base64gzip [base64gzipped-str]
-  (slurp (GZIPInputStream. (io/input-stream (b64/decode (.getBytes base64gzipped-str))))))
+  (try
+    (slurp (GZIPInputStream. (io/input-stream (b64/decode (.getBytes base64gzipped-str)))))
+    (catch EOFException e
+      (throw (ex-info "Cannot decode base64gzip message." {} e)))))
 
 (defn decode-message [message content-type]
   (case content-type
@@ -122,6 +127,11 @@
             (sqs/delete-message {:endpoint clair-check-result-queue-region}
                                 :queue-url clair-check-result-queue-url :receipt-handle receipt-handle)
             (log/info "Updated layer severity info: %s" summary)))
+        (catch ExceptionInfo e
+          (log/error e "Error caught during queue processing. Deleting the corrupt message from the queue. %s"
+                     {:message body})
+          (sqs/delete-message {:endpoint clair-check-result-queue-region}
+                              :queue-url clair-check-result-queue-url :receipt-handle receipt-handle))
         (catch Exception e
           (log/error e "Error caught during queue processing. %s" {:message body})))
       (recur)))
