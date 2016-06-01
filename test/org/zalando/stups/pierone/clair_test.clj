@@ -141,7 +141,8 @@
       (provided
         ..config.. =contains=> {:clair-check-result-queue-url    ..queue-url..
                                 :clair-check-result-queue-region ..queue-region..}
-        (extract-clair-layer ..body1..) =throws=> (ex-info "Cannot decode base64gzip message." {})
+        (extract-clair-layer ..body1..) =throws=> (ex-info "Cannot decode base64gzip message."
+                                                           {:type :org.zalando.stups.pierone.clair/decode-base64gzip-error})
         (store-clair-summary anything anything) => anything :times 0
         (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh1..) => anything))
     (fact "Some other error, nothing should be stored, message should not be deleted"

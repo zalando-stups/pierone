@@ -9,7 +9,8 @@
             [org.zalando.stups.friboo.log :as log]
             [clojure.string :as str]
             [clojure.java.io :as io]
-            [clojure.data.codec.base64 :as b64])
+            [clojure.data.codec.base64 :as b64]
+            [slingshot.slingshot :refer [throw+ try+]])
   (:import (java.util.zip GZIPInputStream)
            (java.io EOFException)
            (clojure.lang ExceptionInfo)))
@@ -78,7 +79,7 @@
   (try
     (slurp (GZIPInputStream. (io/input-stream (b64/decode (.getBytes base64gzipped-str)))))
     (catch EOFException e
-      (throw (ex-info "Cannot decode base64gzip message." {} e)))))
+      (throw+ {:type ::decode-base64gzip-error} e "Cannot decode base64gzip message."))))
 
 (defn decode-message [message content-type]
   (case content-type
@@ -120,20 +121,20 @@
 (defn processor-thread-fn [{:keys [clair-check-result-queue-url clair-check-result-queue-region]} db receive-ch]
   (loop []
     (when-let [{:keys [body receipt-handle]} (<!! receive-ch)]
-      (try
+      (try+
         (when-let [layer (extract-clair-layer body)]
           (let [summary (process-clair-layer layer)]
             (store-clair-summary db summary)
             (sqs/delete-message {:endpoint clair-check-result-queue-region}
                                 :queue-url clair-check-result-queue-url :receipt-handle receipt-handle)
             (log/info "Updated layer severity info: %s" summary)))
-        (catch ExceptionInfo e
-          (log/error e "Error caught during queue processing. Deleting the corrupt message from the queue. %s"
-                     {:message body})
+        (catch [:type ::decode-base64gzip-error] _
+          (log/error (:throwable &throw-context)
+                     "Error caught during queue processing. Deleting the corrupt message from the queue.")
           (sqs/delete-message {:endpoint clair-check-result-queue-region}
                               :queue-url clair-check-result-queue-url :receipt-handle receipt-handle))
-        (catch Exception e
-          (log/error e "Error caught during queue processing. %s" {:message body})))
+        (catch Object _
+          (log/error (:throwable &throw-context) "Error caught during queue processing. %s" {:message body})))
       (recur)))
   (log/debug "Stopping processor thread."))
 
