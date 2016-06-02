@@ -1,10 +1,39 @@
 (ns org.zalando.stups.pierone.pierone-test
   (:require [org.zalando.stups.pierone.test-data :as d]
             [org.zalando.stups.pierone.test-utils :as u]
+            [org.zalando.stups.pierone.api :refer :all]
+            [org.zalando.stups.pierone.sql :as sql]
             [clojure.test :refer :all]
             [cheshire.core :as json]
             [clj-http.client :as client]
-            [com.stuartsierra.component :as component]))
+            [com.stuartsierra.component :as component]
+            [midje.sweet :refer :all]))
+
+(deftest wrap-midje-facts
+
+  (facts "get-clair-link"
+    (get-clair-link {} "foo") => nil
+    (get-clair-link {:clair_id "sha256:42"} "") => nil
+    (get-clair-link {:clair_id "sha256:42"} "https://foo") => "https://foo/v1/layers/sha256:42"
+    (get-clair-link {:clair_id "sha256:42"} "https://foo/") => "https://foo/v1/layers/sha256:42")
+
+  (facts "read-tags"
+
+    (fact "When clair-url is set, generates a link to clair"
+      (read-tags ..parameters.. nil ..db.. nil {:clair-url "https://clair.example.com"})
+      => (contains {:status 200 :body [{:clair_id      "sha256:42"
+                                        :clair_details "https://clair.example.com/v1/layers/sha256:42"}]})
+      (provided
+        (sql/cmd-list-tags ..parameters.. {:connection ..db..}) => [{:clair_id "sha256:42"}]))
+
+    (fact "When clair-url is not set, generates nil"
+      (read-tags ..parameters.. nil ..db.. nil nil)
+      => (contains {:status 200 :body [{:clair_id      "sha256:42"
+                                        :clair_details nil}]})
+      (provided
+        (sql/cmd-list-tags ..parameters.. {:connection ..db..}) => [{:clair_id "sha256:42"}])))
+
+  )
 
 (deftest pierone-test
   (let [system (u/setup)
@@ -35,12 +64,12 @@
                      (:body)
                      (json/parse-string keyword)
                      (first))]
-        (is (= (:artifact result)
-               (:artifact d/tag)))
-        (is (= (:team result)
-               (:team d/tag)))
-        (is (= (:name result)
-               (:name d/tag))))
+      (is (= (:artifact result)
+             (:artifact d/tag)))
+      (is (= (:team result)
+             (:team d/tag)))
+      (is (= (:name result)
+             (:name d/tag))))
 
     (is (= 404 (:status (client/get (u/p1-url "/tags/asdfa")
                                     (u/http-opts)))))
