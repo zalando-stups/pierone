@@ -67,7 +67,7 @@
 (defn setup
   "Starts Pierone."
   []
-  (run {}))
+  (run {:api-clair-url "https://clair.example.com"}))
 
 (defn push-images
   "Pushes images and verifies"

@@ -6,7 +6,9 @@
             [ring.util.response :as ring]
             [environ.core :refer [env]]
             [org.zalando.stups.pierone.api-v2]
-            [org.zalando.stups.pierone.api-v1]))
+            [org.zalando.stups.pierone.api-v1]
+            [clojure.string :as str]
+            [org.zalando.stups.friboo.ring :as r]))
 
 (def api-definition-suffix
   (or (:http-api-definition-suffix env) ""))
@@ -31,16 +33,26 @@
     (-> (ring/response result)
         (fring/content-type-json))))
 
+(defn get-clair-link [tags-result clair-url]
+  (when-not (str/blank? clair-url)
+    (when-let [clair-id (:clair_id tags-result)]
+      (r/conpath clair-url "/v1/layers/" clair-id))))
+
+(defn assoc-clair-link [tags-result clair-url]
+  (assoc tags-result :clair_details (get-clair-link tags-result clair-url)))
+
 (defn read-tags
   "Lists all tags of an artifact."
-  [parameters _ db _ _]
+  [parameters _ db _ {:keys [clair-url]}]
   (let [result (sql/cmd-list-tags parameters {:connection db})]
     (if (seq result)
         ; issue #20
         ; this check is sufficient because an artifact cannot exist without a tag.
         ; if we have no results, then either team or artifact do not exist
-        (-> (ring/response result)
-            (fring/content-type-json))
+        (->> result
+            (map #(assoc-clair-link % clair-url))
+            ring/response
+            fring/content-type-json)
         (ring/not-found nil))))
 
 (defn get-scm-source
