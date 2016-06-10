@@ -17,7 +17,8 @@ Development
 
 The service is written in Clojure. You need Leiningen_ installed to build or develop.
 
-To start a web server for the application, you need a running PostgreSQL instance on localhost (postgres/postgres as user/pass).
+To start a web server for the application, you need a running PostgreSQL instance on localhost with empty pierone database
+(postgres/postgres as user/pass).
 Run the development web server with:
 
 .. code-block:: bash
