@@ -60,6 +60,7 @@
   (let [user (get tokeninfo "uid")
         scopes (set (get tokeninfo "scope"))]
     (when-not (contains? scopes scope)
+      (log/warn "ACCESS DENIED: Missing scope. %s" {:scope scope :user user})
       (api/throw-error 403 "User %s does not have required scope: %s" user scope))))
 
 (defn require-write-access
