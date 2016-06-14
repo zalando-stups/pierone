@@ -7,7 +7,7 @@
 (def default-db-configuration
   {:db-classname   "org.postgresql.Driver"
    :db-subprotocol "postgresql"
-   :db-subname     "//192.168.99.100:5432/pierone"
+   :db-subname     "//localhost:5432/pierone"
    :db-user        "postgres"
    :db-password    "postgres"
    :db-init-sql    "SET statement_timeout TO '60s'; SET search_path TO zp_data"})
