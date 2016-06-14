@@ -1,19 +1,67 @@
 (ns org.zalando.stups.pierone.v2-test
   (:require [org.zalando.stups.pierone.test-data :as d]
             [org.zalando.stups.pierone.test-utils :as u]
+            [org.zalando.stups.pierone.sql :as sql]
+            [org.zalando.stups.pierone.auth :as auth]
+            [org.zalando.stups.pierone.api-v2 :as v2]
             [clojure.java.io :as io]
             [clojure.test :refer :all]
+            [midje.sweet :refer :all]
             [clj-http.client :as client]
-            [cheshire.core :refer :all :as json]
-            [com.stuartsierra.component :as component]))
+            [com.stuartsierra.component :as component]
+            [org.zalando.stups.pierone.clair :as clair]
+            [clojure.java.jdbc :as jdbc])
+  (:import (java.io File)))
+
+(def request {:configuration {:tokeninfo-url "token.info"}
+              :tokeninfo {"realm" "/employees"
+                          "uid" "tester"}})
+(def params {:team "team"
+             :artifact "artifact"
+             :name "name"
+             :digest "digest"
+             :uuid "uuid"
+             :data "data"})
+
+(deftest v2-unit-test
+  (facts "calls require-write-access with correct params"
+    (fact "put-manifest"
+      (v2/put-manifest params request nil nil nil) => truthy
+      (provided
+        (v2/read-manifest "data") => "manifest"
+        (v2/get-fs-layers "manifest") => ["digest"]
+        (clair/prepare-hashes-for-clair "manifest") => []
+        (jdbc/db-transaction* nil anything) => nil
+        (sql/image-blob-exists {:image "digest"} {:connection nil}) => [0 1 2]
+        (auth/require-write-access "team" request) => nil))
+    (fact "patch-upload"
+      (let [file (new File "foo")]
+        (v2/patch-upload params request nil nil nil) => truthy
+        (provided
+          (v2/get-upload-file nil "team" "artifact" "uuid") => file
+          (io/copy "data" file) => nil
+          (v2/compute-digest file) => "digest"
+          (v2/create-image "team" "artifact" "digest" file request nil nil) => nil
+          (io/delete-file file true) => nil
+          (auth/require-write-access "team" request) => nil)))
+    (fact "put-upload"
+      (v2/put-upload params request nil nil nil) => truthy
+      (provided
+        (sql/accept-image-blob! {:image "digest"} {:connection nil}) => 0
+        (auth/require-write-access "team" request) => nil))
+    (fact "post-upload"
+      (v2/post-upload params request nil nil nil) => truthy
+      (provided
+        (auth/require-write-access "team" request) => nil))))
+
 
 (defn expect [status-code response]
   (is (= (:status response)
-         status-code)
-      (apply str "response of wrong status: " response))
+        status-code)
+    (apply str "response of wrong status: " response))
   (:body response))
 
-(deftest v2-test
+(deftest v2-integration-test
   (with-redefs [org.zalando.stups.pierone.clair/send-sqs-message (fn [& _])]
     (let [system (u/setup)
           data (.getBytes "imgdata")]

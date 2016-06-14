@@ -2,7 +2,7 @@
   (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.ring :as r]
-            [org.zalando.stups.friboo.auth :as auth]
+            [org.zalando.stups.pierone.auth :as auth]
             [ring.util.response :as ring]
             [cheshire.core :as json]
             [org.zalando.stups.pierone.sql :as sql]
@@ -55,27 +55,6 @@
         (ring/header "X-Docker-Token" (get (:tokeninfo request) "access_token" "AnonFakeToken"))
         (ring/header "X-Docker-Endpoints" (get-in request [:headers "host"])))))
 
-(defn require-scope
-  [{:keys [tokeninfo] :as request} scope]
-  (let [user (get tokeninfo "uid")
-        scopes (set (get tokeninfo "scope"))]
-    (when-not (contains? scopes scope)
-      (log/warn "ACCESS DENIED: Missing scope. %s" {:scope scope :user user})
-      (api/throw-error 403 "User %s does not have required scope: %s" user scope))))
-
-(defn require-write-access
-  "Require write access to team repository"
-  [team {:keys [tokeninfo] :as request}]
-  ; either user has write access to all (service user)
-  ; or user belongs to a team (employee user)
-  (when (get-in request [:configuration :tokeninfo-url])
-    (when-not (get tokeninfo "application.write_all")
-      (case (get tokeninfo "realm")
-        "/services" (do
-                      (require-scope request "application.write")
-                      (auth/require-auth request team))
-        "/employees" (auth/require-auth request team)))))
-
 (defn ping
   "Client checks for compatibility."
   [_ request _ _ _]
@@ -96,7 +75,7 @@
 (defn put-repo
   "Dummy call."
   [{:keys [team]} request _ _ _]
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (resp "OK" request))
 
 (defn- load-tags
@@ -141,7 +120,7 @@
 (defn put-tag
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable. 'latest' is not allowed."
   [parameters request db _ _]
-  (require-write-access (:team parameters) request)
+  (auth/require-write-access (:team parameters) request)
   (let [connection {:connection db}
         tag-name (:name parameters)
         uid (get-in request [:tokeninfo "uid"])

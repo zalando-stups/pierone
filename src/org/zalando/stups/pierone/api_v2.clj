@@ -3,7 +3,8 @@
             [org.zalando.stups.friboo.system.oauth2 :refer [resolve-access-token]]
             [org.zalando.stups.friboo.log :as log]
             [io.sarnowski.swagger1st.util.api :as api]
-            [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
+            [org.zalando.stups.pierone.api-v1 :as v1]
+            [org.zalando.stups.pierone.auth :as auth]
             [org.zalando.stups.pierone.clair :as clair]
             [cheshire.core :as json]
             [digest]
@@ -116,7 +117,7 @@
 (defn post-upload
   ""
   [{:keys [team artifact]} request _ _ _]
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (let [uuid (UUID/randomUUID)]
     (-> (ring/response "")
         (ring/status 202)
@@ -174,7 +175,7 @@
 (defn patch-upload
   "Upload FS layer blob"
   [{:keys [team artifact uuid data]} request db storage _]
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (let [^File upload-file (get-upload-file storage team artifact uuid)]
     (io/copy data upload-file)
     (let [digest (compute-digest upload-file)
@@ -190,11 +191,12 @@
 (defn put-upload
   "Commit FS layer blob"
   [{:keys [team artifact digest]} request db _ _]
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (let [image-ident (str team "/" artifact "/" digest)]
     ; TODO: file might be uploaded on PUT too
 
     (let [updated-rows (sql/accept-image-blob! {:image digest} {:connection db})]
+      (println updated-rows)
       (if (pos? updated-rows)
         (do
           (log/info "Accepted image %s." image-ident)
@@ -248,7 +250,7 @@
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
   [{:keys [team artifact name data]} request db _ api-config]
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (let [manifest (read-manifest data)
         connection {:connection db}
         uid (get-in request [:tokeninfo "uid"])
