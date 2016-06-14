@@ -5,9 +5,16 @@
             [org.zalando.stups.pierone.auth :as auth]))
 
 (def request {:configuration {:tokeninfo-url "token.info"}
-              :tokeninfo     {"realm" "/employees"}})
+              :tokeninfo     {"realm" "/employees"
+                              "scope" ["foo.bar"]}})
 
-(facts "auth"
+(facts "auth/require-scope"
+  (fact "throws if scope is not in tokeninfo"
+    (auth/require-scope request "foo") => (throws Exception))
+  (fact "does not throw if scope is in tokeninfo"
+    (auth/require-scope request "foo.bar") => nil))
+
+(facts "auth/require-write-access"
   (fact "is cached"
     (auth/require-write-access "team" request) => nil
     (auth/require-write-access "team" request) => nil
