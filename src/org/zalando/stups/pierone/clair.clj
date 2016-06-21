@@ -138,9 +138,9 @@
       (recur)))
   (log/debug "Stopping processor thread."))
 
-(defn read-sqs-message [queue-region queue-url]
+(defn receive-sqs-messages [queue-region queue-url]
   (try
-    (sqs/receive-message {:endpoint queue-region} :queue-url queue-url :wait-time-seconds 20)
+    (sqs/receive-message {:endpoint queue-region} :queue-url queue-url :wait-time-seconds 20 :max-number-of-messages 10)
     (catch Exception e
       (log/error e "Error caught during queue polling. %s" {:queue-region queue-region :queue-url queue-url})
       (Thread/sleep 5000)
@@ -152,7 +152,7 @@
   (let [out-ch (chan)]
     (thread
       (loop []
-        (let [[messages _] (alts!! [stop-ch (go (read-sqs-message queue-region queue-url))])]
+        (let [[messages _] (alts!! [stop-ch (go (receive-sqs-messages queue-region queue-url))])]
           (if-not messages
             (close! out-ch)
             (do
