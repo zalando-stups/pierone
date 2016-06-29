@@ -41,7 +41,10 @@
     :TAG_INVALID {:errors [(assoc (:TAG_INVALID errors) :detail error-detail)]}
     {}))
 
-(def json-pretty-printer (json/create-pretty-printer
+(defn- get-json-pretty-printer
+  "Returns a new (configured) cheshire CustomPrettyPrinter (which is not thread-safe!)"
+  []
+  (json/create-pretty-printer
                            {:indentation                  3
                             :object-field-value-separator ": "
                             :indent-arrays?               true
@@ -294,7 +297,7 @@
             (ring/header "Docker-Content-Digest"
                          (str "sha256:"
                               (-> data
-                                  (json/encode {:pretty json-pretty-printer})
+                                  (json/encode {:pretty (get-json-pretty-printer)})
                                   (digest/sha-256)))))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
@@ -318,7 +321,7 @@
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
     (let [parsed-manifest (json/decode manifest)
           schema-version (get parsed-manifest "schemaVersion")
-          pretty (json/encode parsed-manifest {:pretty json-pretty-printer})
+          pretty (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
           set-header-fn #(condp = schema-version
                           1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
                           2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
