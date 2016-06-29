@@ -42,6 +42,7 @@
     {}))
 
 (defn- get-json-pretty-printer
+  "Returns a new (configured) cheshire CustomPrettyPrinter (which is not thread-safe!)"
   []
   (json/create-pretty-printer
                            {:indentation                  3
