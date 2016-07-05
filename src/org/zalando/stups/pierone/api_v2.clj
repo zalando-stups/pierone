@@ -199,7 +199,6 @@
     ; TODO: file might be uploaded on PUT too
 
     (let [updated-rows (sql/accept-image-blob! {:image digest} {:connection db})]
-      (println updated-rows)
       (if (pos? updated-rows)
         (do
           (log/info "Accepted image %s." image-ident)
