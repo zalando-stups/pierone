@@ -1,11 +1,8 @@
 (ns org.zalando.stups.pierone.clair-test
   (:require [clojure.test :refer :all]
             [midje.sweet :refer :all]
-            [org.zalando.stups.pierone.clair :refer :all]
-            [amazonica.aws.sqs :as sqs]
-            [clojure.core.async :as a])
-  (:import (clojure.lang ExceptionInfo)
-           (java.io EOFException)))
+            [org.zalando.stups.pierone.clair :refer :all])
+  (:import (clojure.lang ExceptionInfo)))
 
 (defn fake-sha256 [x]
   (str "[" x "]"))
@@ -121,38 +118,26 @@
                                                                        {"Severity" "Low"}]}]})
     => {:clair-id "foo" :severity-fix-available "Low" :severity-no-fix-available "Low"})
 
-  (facts "processor-thread-fn"
-    (fact "happy path, processes messages from the channel one by one"
-      (processor-thread-fn ..config.. ..db.. (a/to-chan [{:body ..body1.. :receipt-handle ..rh1..}
-                                                         {:body ..body2.. :receipt-handle ..rh2..}])) => anything
+  (facts "process-message"
+    (fact "when everything is ok, processes the message and returns true"
+      (process-message ..db.. ..body..) => true
       (provided
-        ..config.. =contains=> {:clair-check-result-queue-url    ..queue-url..
-                                :clair-check-result-queue-region ..queue-region..}
-        (extract-clair-layer ..body1..) => ..layer1..
-        (extract-clair-layer ..body2..) => ..layer2..
-        (process-clair-layer ..layer1..) => ..summary1..
-        (process-clair-layer ..layer2..) => ..summary2..
-        (store-clair-summary ..db.. ..summary1..) => anything
-        (store-clair-summary ..db.. ..summary2..) => anything
-        (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh1..) => anything
-        (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh2..) => anything))
-    (fact "message parse error, nothing should be stored, message should be deleted"
-      (processor-thread-fn ..config.. ..db.. (a/to-chan [{:body ..body1.. :receipt-handle ..rh1..}])) => anything
+        (extract-clair-layer ..body..) => ..layer..
+        (process-clair-layer ..layer..) => ..summary..
+        (store-clair-summary ..db.. ..summary..) => anything))
+    (fact "when extract-clair-layer fails with base64gzip, returns true"
+      (process-message ..db.. ..body..) => true
       (provided
-        ..config.. =contains=> {:clair-check-result-queue-url    ..queue-url..
-                                :clair-check-result-queue-region ..queue-region..}
-        (extract-clair-layer ..body1..) =throws=> (ex-info "Cannot decode base64gzip message."
+        (extract-clair-layer ..body..) =throws=> (ex-info "Cannot decode base64gzip message."
                                                            {:type :org.zalando.stups.pierone.clair/decode-base64gzip-error})
-        (store-clair-summary anything anything) => anything :times 0
-        (sqs/delete-message {:endpoint ..queue-region..} :queue-url ..queue-url.. :receipt-handle ..rh1..) => anything))
-    (fact "Some other error, nothing should be stored, message should not be deleted"
-      (processor-thread-fn ..config.. ..db.. (a/to-chan [{:body ..body1.. :receipt-handle ..rh1..}])) => anything
+        (process-clair-layer anything) => anything :times 0
+        (store-clair-summary anything anything) => anything :times 0))
+    (fact "when extract-clair-layer fails some other exception, returns false"
+      (process-message ..db.. ..body..) => false
       (provided
-        ..config.. =contains=> {:clair-check-result-queue-url    ..queue-url..
-                                :clair-check-result-queue-region ..queue-region..}
-        (extract-clair-layer ..body1..) =throws=> (Exception. "Bad thing happened")
-        (store-clair-summary anything anything) => anything :times 0
-        (sqs/delete-message anything :queue-url anything :receipt-handle anything) => anything :times 0)))
+        (extract-clair-layer ..body..) =throws=> (Exception. "Bad thing happened")
+        (process-clair-layer anything) => anything :times 0
+        (store-clair-summary anything anything) => anything :times 0)))
 
   )
 
