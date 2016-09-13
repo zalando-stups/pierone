@@ -6,21 +6,21 @@
   :scm {:url "git@github.com:zalando-stups/pierone"}
   :min-lein-version "2.0.0"
 
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.zalando.stups/friboo "1.9.0"]
-                 [yesql "0.5.1"]
-                 [cheshire "5.6.0"]
-                 [digest "1.4.4"]
-                 [org.apache.commons/commons-compress "1.10"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.zalando.stups/friboo "1.10.0"]
+                 [yesql "0.5.3"]
+                 [cheshire "5.6.3"]
+                 [digest "1.4.5"]
+                 [org.apache.commons/commons-compress "1.12"]
                  [org.clojure/data.codec "0.1.0"]
-                 [amazonica "0.3.57"]
-                 [org.clojure/java.jdbc "0.4.1"]
-                 [org.clojure/core.async "0.2.374"]]
+                 [amazonica "0.3.76"]
+                 [org.clojure/java.jdbc "0.6.2-alpha3"]
+                 [org.clojure/core.async "0.2.391"]]
 
   :main ^:skip-aot org.zalando.stups.pierone.core
   :uberjar-name "pierone.jar"
 
-  :plugins [[lein-cloverage "1.0.6"]
+  :plugins [[lein-cloverage "1.0.7-SNAPSHOT"]
             [io.sarnowski/lein-docker "1.1.0"]
             [org.zalando.stups/lein-scm-source "0.2.0"]]
 
