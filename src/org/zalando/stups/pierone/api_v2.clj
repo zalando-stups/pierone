@@ -3,7 +3,8 @@
             [org.zalando.stups.friboo.system.oauth2 :refer [resolve-access-token]]
             [org.zalando.stups.friboo.log :as log]
             [io.sarnowski.swagger1st.util.api :as api]
-            [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
+            [org.zalando.stups.pierone.api-v1 :as v1]
+            [org.zalando.stups.pierone.auth :as auth]
             [org.zalando.stups.pierone.clair :as clair]
             [org.zalando.stups.pierone.audit :as audit]
             [cheshire.core :as json]
@@ -41,7 +42,10 @@
     :TAG_INVALID {:errors [(assoc (:TAG_INVALID errors) :detail error-detail)]}
     {}))
 
-(def json-pretty-printer (json/create-pretty-printer
+(defn- get-json-pretty-printer
+  "Returns a new (configured) cheshire CustomPrettyPrinter (which is not thread-safe!)"
+  []
+  (json/create-pretty-printer
                            {:indentation                  3
                             :object-field-value-separator ": "
                             :indent-arrays?               true
@@ -117,7 +121,7 @@
 (defn post-upload
   ""
   [{:keys [team artifact]} request _ _ _ _]
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (let [uuid (UUID/randomUUID)]
     (-> (ring/response "")
         (ring/status 202)
@@ -175,7 +179,7 @@
 (defn patch-upload
   "Upload FS layer blob"
   [{:keys [team artifact uuid data]} request db storage _ _]
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (let [^File upload-file (get-upload-file storage team artifact uuid)]
     (io/copy data upload-file)
     (let [digest (compute-digest upload-file)
@@ -191,7 +195,7 @@
 (defn put-upload
   "Commit FS layer blob"
   [{:keys [team artifact digest]} request db _ _ _]
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (let [image-ident (str team "/" artifact "/" digest)]
     ; TODO: file might be uploaded on PUT too
 
@@ -239,7 +243,6 @@
   [manifest]
   (let [schema-version (:schemaVersion manifest)]
     (condp = schema-version
-      1 (map :blobSum (:fsLayers manifest))
       2 (apply conj
                [(get-in manifest [:config :digest])]
                (map :digest (:layers manifest)))
@@ -254,8 +257,7 @@
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
   [{:keys [team artifact name data]} request db _ api-config {:keys [log-fn]}]
-  ; TODO NIKO add here
-  (require-write-access team request)
+  (auth/require-write-access team request)
   (let [manifest (read-manifest data)
         connection {:connection db}
         tokeninfo (:tokeninfo request)
@@ -310,7 +312,7 @@
             (ring/header "Docker-Content-Digest"
                          (str "sha256:"
                               (-> data
-                                  (json/encode {:pretty json-pretty-printer})
+                                  (json/encode {:pretty (get-json-pretty-printer)})
                                   (digest/sha-256)))))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
@@ -334,10 +336,10 @@
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
     (let [parsed-manifest (json/decode manifest)
           schema-version (get parsed-manifest "schemaVersion")
-          pretty (json/encode parsed-manifest {:pretty json-pretty-printer})
+          pretty (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
           set-header-fn #(condp = schema-version
-                          1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
                           2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
+                          (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
                           %)]
       (-> (resp pretty request)
           (set-header-fn)

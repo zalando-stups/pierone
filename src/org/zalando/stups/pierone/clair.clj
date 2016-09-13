@@ -4,7 +4,7 @@
             [io.sarnowski.swagger1st.util.api :as api]
             [cheshire.core :as json]
             [com.stuartsierra.component :as component]
-            [clojure.core.async :as a :refer [chan go alts!! <!! >!! thread close! go-loop]]
+            [clojure.core.async :as a :refer [thread]]
             [org.zalando.stups.pierone.sql :as sql]
             [org.zalando.stups.friboo.log :as log]
             [clojure.string :as str]
@@ -12,8 +12,7 @@
             [clojure.data.codec.base64 :as b64]
             [slingshot.slingshot :refer [throw+ try+]])
   (:import (java.util.zip GZIPInputStream)
-           (java.io EOFException)
-           (clojure.lang ExceptionInfo)))
+           (java.io EOFException)))
 
 (defn tails [coll]
   (if (empty? coll)
@@ -118,67 +117,65 @@
                              :severity_fix_available    severity-fix-available
                              :severity_no_fix_available severity-no-fix-available} {:connection db}))
 
-(defn processor-thread-fn [{:keys [clair-check-result-queue-url clair-check-result-queue-region]} db receive-ch]
-  (loop []
-    (when-let [{:keys [body receipt-handle]} (<!! receive-ch)]
-      (try+
-        (when-let [layer (extract-clair-layer body)]
-          (let [summary (process-clair-layer layer)]
-            (store-clair-summary db summary)
-            (sqs/delete-message {:endpoint clair-check-result-queue-region}
-                                :queue-url clair-check-result-queue-url :receipt-handle receipt-handle)
-            (log/info "Updated layer severity info: %s" summary)))
-        (catch [:type ::decode-base64gzip-error] _
-          (log/error (:throwable &throw-context)
-                     "Error caught during queue processing. Deleting the corrupt message from the queue.")
-          (sqs/delete-message {:endpoint clair-check-result-queue-region}
-                              :queue-url clair-check-result-queue-url :receipt-handle receipt-handle))
-        (catch Object _
-          (log/error (:throwable &throw-context) "Error caught during queue processing. %s" {:message body})))
-      (recur)))
-  (log/debug "Stopping processor thread."))
-
-(defn read-sqs-message [queue-region queue-url]
+(defn receive-sqs-messages [queue-region queue-url]
   (try
-    (sqs/receive-message {:endpoint queue-region} :queue-url queue-url :wait-time-seconds 20)
+    (sqs/receive-message {:endpoint queue-region} :queue-url queue-url :wait-time-seconds 5 :max-number-of-messages 10)
     (catch Exception e
       (log/error e "Error caught during queue polling. %s" {:queue-region queue-region :queue-url queue-url})
       (Thread/sleep 5000)
       {:messages []})))
 
-;; Creates a channel and returns it
-;; In the background gets messages from the queue in batches and puts them one by one into the channel
-(defn sqs-receive-chan [stop-ch queue-region queue-url]
-  (let [out-ch (chan)]
-    (thread
-      (loop []
-        (let [[messages _] (alts!! [stop-ch (go (read-sqs-message queue-region queue-url))])]
-          (if-not messages
-            (close! out-ch)
-            (do
-              (doseq [m (:messages messages)]
-                (>!! out-ch m))
-              (recur)))))
-      (log/debug "Stopping receiver thread."))
-    out-ch))
+(defn process-message [db body]
+  (try+
+    (when-let [layer (extract-clair-layer body)]
+      (let [summary (process-clair-layer layer)]
+        (store-clair-summary db summary)
+        (log/info "Updated layer severity info: %s" summary)
+        true))
+    (catch [:type ::decode-base64gzip-error] _
+      (log/error (:throwable &throw-context)
+                "Error caught during queue processing. Deleting the corrupt message from the queue.")
+      true)
+    (catch Object _
+      (log/error (:throwable &throw-context) "Error caught during queue processing. %s" {:message body})
+      false)))
 
-(defn start-receiver [{:keys [clair-check-result-queue-region clair-check-result-queue-url] :as api-config} db]
+(defn receiver-thread-fn [clair-check-result-queue-region clair-check-result-queue-url working-atom processor-fn]
+  (loop []
+    (when @working-atom
+      (let [response (receive-sqs-messages clair-check-result-queue-region clair-check-result-queue-url)]
+        (doseq [{:keys [body receipt-handle]} (:messages response)]
+          (when (processor-fn body)
+            (try
+              (sqs/delete-message {:endpoint clair-check-result-queue-region}
+                                  :queue-url clair-check-result-queue-url :receipt-handle receipt-handle)
+              (catch Exception e
+                (log/error e "Error caught when deleting a processed message from the queue")))))
+        (recur)))))
+
+(defn start-receiver [{:keys [clair-check-result-queue-region
+                                clair-check-result-queue-url
+                                clair-receiver-thread-count]
+                         :or {clair-receiver-thread-count 20}}
+                        db
+                        processor-fn]
   (if (some str/blank? [clair-check-result-queue-region clair-check-result-queue-url])
     (log/warn "No API_CLAIR_CHECK_RESULT_QUEUE_REGION or API_CLAIR_CHECK_RESULT_QUEUE_URL, not starting ClairReceiver.")
-    (let [stop-ch (chan)
-          receive-ch (sqs-receive-chan stop-ch clair-check-result-queue-region clair-check-result-queue-url)]
-      (log/info "Starting ClairReceiver")
-      (thread (processor-thread-fn api-config db receive-ch))
-      stop-ch)))
+    (let [working-atom (atom true)]
+      (log/info "Starting ClairReceiver with %s threads" clair-receiver-thread-count)
+      (dotimes [_ clair-receiver-thread-count]
+        (thread (receiver-thread-fn clair-check-result-queue-region clair-check-result-queue-url
+                                    working-atom (partial processor-fn db))))
+      working-atom)))
 
-(defrecord ClairReceiver [api-config db stop-ch]
+(defrecord ClairReceiver [api-config db working-atom]
   component/Lifecycle
   (start [this]
-    (assoc this :stop-ch (start-receiver api-config db)))
+    (assoc this :working-atom (start-receiver api-config db process-message)))
   (stop [this]
-    (when stop-ch
+    (when working-atom
       (log/info "Stopping ClairReceiver")
-      (close! stop-ch))
+      (reset! working-atom false))
     this))
 
 (defn make-clair-receiver []

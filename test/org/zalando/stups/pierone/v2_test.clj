@@ -1,20 +1,68 @@
 (ns org.zalando.stups.pierone.v2-test
   (:require [org.zalando.stups.pierone.test-data :as d]
             [org.zalando.stups.pierone.test-utils :as u]
+            [org.zalando.stups.pierone.sql :as sql]
+            [org.zalando.stups.pierone.auth :as auth]
+            [org.zalando.stups.pierone.api-v2 :as v2]
             [clojure.java.io :as io]
             [clojure.test :refer :all]
+            [midje.sweet :refer :all]
             [clj-http.client :as client]
-            [cheshire.core :refer :all :as json]
             [com.stuartsierra.component :as component]
-            [org.zalando.stups.friboo.system.oauth2 :as oauth2]))
+            [org.zalando.stups.pierone.clair :as clair]
+            [org.zalando.stups.friboo.system.oauth2 :as oauth2]
+            [clojure.java.jdbc :as jdbc])
+  (:import (java.io File)))
+
+(def request {:configuration {:tokeninfo-url "token.info"}
+              :tokeninfo {"realm" "/employees"
+                          "uid" "tester"}})
+(def params {:team "team"
+             :artifact "artifact"
+             :name "name"
+             :digest "digest"
+             :uuid "uuid"
+             :data "data"})
+
+(deftest v2-unit-test
+  (facts "calls require-write-access with correct params"
+    (fact "put-manifest"
+      (v2/put-manifest params request nil nil nil) => truthy
+      (provided
+        (v2/read-manifest "data") => "manifest"
+        (v2/get-fs-layers "manifest") => ["digest"]
+        (clair/prepare-hashes-for-clair "manifest") => []
+        (jdbc/db-transaction* nil anything) => nil
+        (sql/image-blob-exists {:image "digest"} {:connection nil}) => [0 1 2]
+        (auth/require-write-access "team" request) => nil))
+    (fact "patch-upload"
+      (let [file (new File "foo")]
+        (v2/patch-upload params request nil nil nil) => truthy
+        (provided
+          (v2/get-upload-file nil "team" "artifact" "uuid") => file
+          (io/copy "data" file) => nil
+          (v2/compute-digest file) => "digest"
+          (v2/create-image "team" "artifact" "digest" file request nil nil) => nil
+          (io/delete-file file true) => nil
+          (auth/require-write-access "team" request) => nil)))
+    (fact "put-upload"
+      (v2/put-upload params request nil nil nil) => truthy
+      (provided
+        (sql/accept-image-blob! {:image "digest"} {:connection nil}) => 0
+        (auth/require-write-access "team" request) => nil))
+    (fact "post-upload"
+      (v2/post-upload params request nil nil nil) => truthy
+      (provided
+        (auth/require-write-access "team" request) => nil))))
+
 
 (defn expect [status-code response]
   (is (= (:status response)
-         status-code)
-      (apply str "response of wrong status: " response))
+        status-code)
+    (apply str "response of wrong status: " response))
   (:body response))
 
-(deftest v2-test
+(deftest v2-integration-test
   (with-redefs [org.zalando.stups.pierone.clair/send-sqs-message (fn [& _])
                 oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher]
     (let [system (u/setup)
@@ -71,16 +119,16 @@
               (client/put (u/v2-url "/myteam/myart/manifests/1.0")
                           (u/http-opts (io/input-stream (:bytes d/manifest-v4)))))
 
-      (expect 201
+      (expect 400
+              ; manifest v1 format no longer supported
               (client/put (u/v2-url "/myteam/myart/manifests/1.0")
                           (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
 
-      (expect 409
-              ; duplicate tag
+      (expect 201
               (client/put (u/v2-url "/myteam/myart/manifests/1.0")
                           (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
 
-      (is (= (:pretty d/manifest-v1)
+      (is (= (:pretty d/manifest-v2)
              (expect 200
                      (client/get (u/v2-url "/myteam/myart/manifests/1.0")
                                  (u/http-opts)))))
@@ -107,37 +155,17 @@
       ; check that *-SNAPSHOT tags are mutable
       (expect 201
               (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                          (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
+                          (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
 
       ; works, no changes
       (expect 201
               (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                          (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
+                          (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
 
       (let [response (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
                                  (u/http-opts))]
-        (is (= "application/vnd.docker.distribution.manifest.v1+prettyjws"
-               (get-in response [:headers "Content-Type"]))))
-
-      ; update, new manifest
-      (expect 201
-              (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                          (u/http-opts (io/input-stream (:bytes d/manifest-v1-multilayer)))))
-
-      (is (= (:pretty d/manifest-v1-multilayer)
-             (expect 200
-                     (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                                 (u/http-opts)))))
-
-      (expect 201 (client/put (u/v2-url "/myteam/myart/manifests/2.0-SNAPSHOT")
-                              (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
-
-      (let [response (client/get (u/v2-url "/myteam/myart/manifests/2.0-SNAPSHOT")
-                                 (u/http-opts))]
-
         (is (= "application/vnd.docker.distribution.manifest.v2+json"
                (get-in response [:headers "Content-Type"]))))
-
 
       ; stop
       (component/stop system))))
