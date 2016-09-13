@@ -5,7 +5,8 @@
             [clojure.test :refer :all]
             [clj-http.client :as client]
             [cheshire.core :refer :all :as json]
-            [com.stuartsierra.component :as component]))
+            [com.stuartsierra.component :as component]
+            [org.zalando.stups.friboo.system.oauth2 :as oauth2]))
 
 (defn expect [status-code response]
   (is (= (:status response)
@@ -14,7 +15,8 @@
   (:body response))
 
 (deftest v2-test
-  (with-redefs [org.zalando.stups.pierone.clair/send-sqs-message (fn [& _])]
+  (with-redefs [org.zalando.stups.pierone.clair/send-sqs-message (fn [& _])
+                oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher]
     (let [system (u/setup)
           data (.getBytes "imgdata")]
       (u/wipe-db system)

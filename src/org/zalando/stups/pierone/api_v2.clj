@@ -5,6 +5,7 @@
             [io.sarnowski.swagger1st.util.api :as api]
             [org.zalando.stups.pierone.api-v1 :as v1 :refer [require-write-access]]
             [org.zalando.stups.pierone.clair :as clair]
+            [org.zalando.stups.pierone.audit :as audit]
             [cheshire.core :as json]
             [digest]
             [ring.util.response :as ring]
@@ -97,7 +98,7 @@
 
 (defn ping
   "Checks for compatibility with version 2."
-  [_ request _ _ _]
+  [_ request _ _ _ _]
   ; NOTE: we are doing our own OAuth check here as Docker requires an extra V2 header set
   (let [config (:configuration request)
         tokeninfo-url (:tokeninfo-url config)
@@ -115,7 +116,7 @@
 
 (defn post-upload
   ""
-  [{:keys [team artifact]} request _ _ _]
+  [{:keys [team artifact]} request _ _ _ _]
   (require-write-access team request)
   (let [uuid (UUID/randomUUID)]
     (-> (ring/response "")
@@ -173,7 +174,7 @@
 
 (defn patch-upload
   "Upload FS layer blob"
-  [{:keys [team artifact uuid data]} request db storage _]
+  [{:keys [team artifact uuid data]} request db storage _ _]
   (require-write-access team request)
   (let [^File upload-file (get-upload-file storage team artifact uuid)]
     (io/copy data upload-file)
@@ -189,7 +190,7 @@
 
 (defn put-upload
   "Commit FS layer blob"
-  [{:keys [team artifact digest]} request db _ _]
+  [{:keys [team artifact digest]} request db _ _ _]
   (require-write-access team request)
   (let [image-ident (str team "/" artifact "/" digest)]
     ; TODO: file might be uploaded on PUT too
@@ -205,7 +206,7 @@
 
 (defn head-blob
   "Check whether image (FS layer) exists."
-  [{:keys [digest]} request db _ _]
+  [{:keys [digest]} request db _ _ _]
   (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
     (-> (resp "OK" request)
         (ring/header "Docker-Content-Digest" digest)
@@ -214,7 +215,7 @@
 
 (defn get-blob
   "Reads the binary data of an image."
-  [{:keys [digest]} request db storage _]
+  [{:keys [digest]} request db storage _ _]
   (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
     (let [data (load-image storage digest)]
       (-> (resp data request :binary? true)
@@ -245,14 +246,22 @@
       ; else
       (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
 
+(defn get-scm-source
+  "Gets scm-source data for a tag with these layers"
+  [db fs-layers]
+  (sql/get-scm-source-from-images {:images fs-layers} {:connection db}))
+
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
-  [{:keys [team artifact name data]} request db _ api-config]
+  [{:keys [team artifact name data]} request db _ api-config {:keys [log-fn]}]
+  ; TODO NIKO add here
   (require-write-access team request)
   (let [manifest (read-manifest data)
         connection {:connection db}
-        uid (get-in request [:tokeninfo "uid"])
+        tokeninfo (:tokeninfo request)
+        uid (get tokeninfo "uid")
         fs-layers (get-fs-layers manifest)
+        scm-source (get-scm-source db fs-layers)
         clair-hashes (clair/prepare-hashes-for-clair manifest)
         topmost-layer-clair-id (-> clair-hashes last :current :clair-id)
         ;; TODO get registry URL from config
@@ -276,6 +285,15 @@
     (if (= "latest" name)
       (resp "tag latest is not allowed" request :status 409)
       (try
+        ;; Send audit log event
+        (log-fn
+          (audit/tag-uploaded
+            tokeninfo
+            scm-source
+            {:team team
+             :artifact artifact
+             :name name
+             :repository (:repository api-config)}))
         ;; Wrap in a transaction together with putting SQS messages
         (jdbc/with-db-transaction [tr db]
           (sql/create-manifest! params-with-user
@@ -312,7 +330,7 @@
 
 (defn get-manifest
   "get"
-  [parameters request db _ _]
+  [parameters request db _ _ _]
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
     (let [parsed-manifest (json/decode manifest)
           schema-version (get parsed-manifest "schemaVersion")
@@ -328,12 +346,12 @@
 
 (defn list-tags
   "get"
-  [{:keys [team artifact] :as parameters} request db _ _]
+  [{:keys [team artifact] :as parameters} request db _ _ _]
   (let [tags (map :name (sql/list-tag-names parameters {:connection db}))]
     (resp {:name (str team "/" artifact) :tags tags} request)))
 
 (defn list-repositories
   "get"
-  [_ request db _ _]
+  [_ request db _ _ _]
   (let [repos (map :name (sql/list-repositories {} {:connection db}))]
     (resp {:repositories repos} request)))

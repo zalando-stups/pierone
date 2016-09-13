@@ -74,6 +74,36 @@ SELECT ssd_url AS url,
 ORDER BY created DESC
  LIMIT 1;
 
+-- name: get-scm-source-from-images
+WITH RECURSIVE parents(i_id)
+    AS (SELECT t_image_id
+          FROM tags
+         WHERE t_image_id in (:images)
+         UNION
+        SELECT img.i_parent_id
+          FROM images img,
+               parents p
+         WHERE img.i_id = p.i_id
+           AND img.i_accepted = TRUE)
+SELECT ssd_url AS url,
+       ssd_revision AS revision,
+       ssd_author AS author,
+       ssd_status AS status,
+       ssd_created AS created
+  FROM parents
+  JOIN scm_source_data ON ssd_image_id = i_id
+UNION
+-- v2: manifest with FS layer references
+SELECT ssd_url AS url,
+       ssd_revision AS revision,
+       ssd_author AS author,
+       ssd_status AS status,
+       ssd_created AS created
+  FROM tags
+ WHERE ssd_image_id IN (:images)
+ORDER BY created DESC
+ LIMIT 1;
+
 -- name: get-total-storage
 SELECT SUM(i_size) AS total
   FROM images

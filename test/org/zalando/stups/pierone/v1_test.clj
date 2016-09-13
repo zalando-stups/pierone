@@ -5,10 +5,12 @@
             [clojure.java.io :as io]
             [clj-http.client :as client]
             [cheshire.core :as json]
-            [com.stuartsierra.component :as component]))
+            [com.stuartsierra.component :as component]
+            [org.zalando.stups.friboo.system.oauth2 :as oauth2]))
 
 (deftest v1-test
-  (let [system (u/setup)]
+  (with-redefs [oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher]
+    (let [system (u/setup)]
 
     (u/wipe-db system)
 
@@ -200,4 +202,4 @@
                               (u/http-opts)))
 
     ; shutdown
-    (component/stop system)))
+    (component/stop system))))

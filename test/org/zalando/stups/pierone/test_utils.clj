@@ -89,3 +89,9 @@
                                 (:id image)
                                 "/layer")
                         (http-opts (io/input-stream (:data image)))))))
+
+(defrecord NoTokenRefresher
+  [configuration]
+  com.stuartsierra.component/Lifecycle
+  (start [this] this)
+  (stop [this] this))
