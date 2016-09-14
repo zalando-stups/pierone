@@ -57,7 +57,7 @@
 
 (defn ping
   "Client checks for compatibility."
-  [_ request _ _ _]
+  [_ request _ _ _ _]
   (resp true request))
 
 (defn search

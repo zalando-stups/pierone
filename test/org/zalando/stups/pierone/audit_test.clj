@@ -9,7 +9,7 @@
       (audit/tag-uploaded .tokeninfo. .scm-source. .tag-data.) => (contains {:event_type {:namespace "cloud.zalando.com"
                                                                                           :name "docker-image-uploaded"
                                                                                           :version "1"}
-                                                                             :triggered_at #"\d{4}-d\{2}-\d{2}T\d{2}-\d{2}-\d{2}Z"
+                                                                             :triggered_at #"\d{4}-d\{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"
                                                                              :triggered_by {:type "USER"
                                                                                             :id .uid.
                                                                                             :additional {:realm .realm.}}

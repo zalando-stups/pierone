@@ -27,17 +27,18 @@
 (deftest v2-unit-test
   (facts "calls require-write-access with correct params"
     (fact "put-manifest"
-      (v2/put-manifest params request nil nil nil) => truthy
+      (v2/put-manifest params request nil nil nil {:log-fn identity}) => truthy
       (provided
         (v2/read-manifest "data") => "manifest"
         (v2/get-fs-layers "manifest") => ["digest"]
         (clair/prepare-hashes-for-clair "manifest") => []
         (jdbc/db-transaction* nil anything) => nil
+        (sql/get-scm-source-from-images {:images ["digest"]} {:connection nil}) => {}
         (sql/image-blob-exists {:image "digest"} {:connection nil}) => [0 1 2]
         (auth/require-write-access "team" request) => nil))
     (fact "patch-upload"
       (let [file (new File "foo")]
-        (v2/patch-upload params request nil nil nil) => truthy
+        (v2/patch-upload params request nil nil nil nil) => truthy
         (provided
           (v2/get-upload-file nil "team" "artifact" "uuid") => file
           (io/copy "data" file) => nil
@@ -46,12 +47,12 @@
           (io/delete-file file true) => nil
           (auth/require-write-access "team" request) => nil)))
     (fact "put-upload"
-      (v2/put-upload params request nil nil nil) => truthy
+      (v2/put-upload params request nil nil nil nil) => truthy
       (provided
         (sql/accept-image-blob! {:image "digest"} {:connection nil}) => 0
         (auth/require-write-access "team" request) => nil))
     (fact "post-upload"
-      (v2/post-upload params request nil nil nil) => truthy
+      (v2/post-upload params request nil nil nil nil) => truthy
       (provided
         (auth/require-write-access "team" request) => nil))))
 
