@@ -249,11 +249,6 @@
       ; else
       (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
 
-(defn get-scm-source
-  "Gets scm-source data for a tag with these layers"
-  [db fs-layers]
-  (sql/get-scm-source-from-images {:images fs-layers} {:connection db}))
-
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
   [{:keys [team artifact name data]} request db _ api-config {:keys [log-fn]}]
@@ -263,7 +258,6 @@
         tokeninfo (:tokeninfo request)
         uid (get tokeninfo "uid")
         fs-layers (get-fs-layers manifest)
-        scm-source (get-scm-source db fs-layers)
         clair-hashes (clair/prepare-hashes-for-clair manifest)
         topmost-layer-clair-id (-> clair-hashes last :current :clair-id)
         ;; TODO get registry URL from config
@@ -287,15 +281,6 @@
     (if (= "latest" name)
       (resp "tag latest is not allowed" request :status 409)
       (try
-        ;; Send audit log event
-        (log-fn
-          (audit/tag-uploaded
-            tokeninfo
-            scm-source
-            {:team team
-             :artifact artifact
-             :name name
-             :repository (:repository api-config)}))
         ;; Wrap in a transaction together with putting SQS messages
         (jdbc/with-db-transaction [tr db]
           (sql/create-manifest! params-with-user
@@ -308,6 +293,20 @@
                 (log/info "Submitting image to Clair: %s" topmost-layer-clair-id)
                 (clair/send-sqs-message queue-region queue-url clair-sqs-messages)))))
         (log/info "Stored new tag %s." tag-ident)
+        ; write audit log
+        (let [scm-source (sql/get-scm-source
+                           {:team team
+                            :artifact artifact
+                            :tag name}
+                           {:connection db})]
+          (log-fn
+            (audit/tag-uploaded
+              tokeninfo
+              scm-source
+              {:team team
+               :artifact artifact
+               :name name
+               :repository (:repository api-config)})))
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
                          (str "sha256:"

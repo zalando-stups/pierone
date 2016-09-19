@@ -14,7 +14,7 @@
                    {:current {:clair-id "[abase]", :original-id "a"}
                     :parent  {:clair-id "[base]", :original-id "base"}}])
 
-(deftest wrap-midje-facts
+(deftest ^:unit wrap-midje-facts
 
   (facts "tails"
     (tails nil) => []

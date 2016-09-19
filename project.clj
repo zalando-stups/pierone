@@ -43,6 +43,10 @@
 
   :aliases {"cloverage" ["with-profile" "test" "cloverage"]}
 
+  :test-selectors {:default     :integration
+                   :unit        :unit
+                   :integration :integration}
+
   :profiles {:uberjar {:aot :all}
 
              :dev     {:repl-options {:init-ns user}

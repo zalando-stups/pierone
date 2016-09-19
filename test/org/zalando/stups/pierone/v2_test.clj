@@ -24,7 +24,7 @@
              :uuid "uuid"
              :data "data"})
 
-(deftest v2-unit-test
+(deftest ^:unit v2-unit-test
   (facts "calls require-write-access with correct params"
     (fact "put-manifest"
       (v2/put-manifest params request nil nil nil {:log-fn identity}) => truthy
@@ -33,7 +33,7 @@
         (v2/get-fs-layers "manifest") => ["digest"]
         (clair/prepare-hashes-for-clair "manifest") => []
         (jdbc/db-transaction* nil anything) => nil
-        (sql/get-scm-source-from-images {:images ["digest"]} {:connection nil}) => {}
+        (sql/get-scm-source {:team "team" :artifact "artifact" :tag "name"} {:connection nil}) => {}
         (sql/image-blob-exists {:image "digest"} {:connection nil}) => [0 1 2]
         (auth/require-write-access "team" request) => nil))
     (fact "patch-upload"
@@ -63,7 +63,7 @@
     (apply str "response of wrong status: " response))
   (:body response))
 
-(deftest v2-integration-test
+(deftest ^:integration v2-integration-test
   (with-redefs [org.zalando.stups.pierone.clair/send-sqs-message (fn [& _])
                 oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher]
     (let [system (u/setup)

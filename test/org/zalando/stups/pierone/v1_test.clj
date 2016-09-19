@@ -8,7 +8,7 @@
             [com.stuartsierra.component :as component]
             [org.zalando.stups.friboo.system.oauth2 :as oauth2]))
 
-(deftest v1-test
+(deftest ^:integration v1-test
   (with-redefs [oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher]
     (let [system (u/setup)]
 

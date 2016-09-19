@@ -9,7 +9,7 @@
             [com.stuartsierra.component :as component]
             [midje.sweet :refer :all]))
 
-(deftest wrap-midje-facts
+(deftest ^:unit wrap-midje-facts
 
   (facts "get-clair-link"
     (get-clair-link {} "foo") => nil
@@ -35,7 +35,7 @@
 
   )
 
-(deftest pierone-test
+(deftest ^:integration pierone-test
   (with-redefs [org.zalando.stups.friboo.system.oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher]
     (let [system (u/setup)
           root (first d/images-hierarchy)
