@@ -294,10 +294,11 @@
                 (clair/send-sqs-message queue-region queue-url clair-sqs-messages)))))
         (log/info "Stored new tag %s." tag-ident)
         ; write audit log
-        (let [scm-source (sql/get-scm-source
-                           {:team team
-                            :artifact artifact
-                            :tag name}
+        (let [tag-info {:team team
+                        :artifact artifact
+                        :tag name}
+              scm-source (sql/get-scm-source
+                           tag-info
                            {:connection db})]
           (log-fn
             (audit/tag-uploaded
@@ -305,7 +306,7 @@
               scm-source
               {:team team
                :artifact artifact
-               :name name
+               :tag name
                :repository (:repository api-config)})))
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"

@@ -16,7 +16,8 @@
             [clojure.data.codec.base64 :as b64]
             [com.netflix.hystrix.core :refer [defcommand]]
             [org.zalando.stups.friboo.config :refer [require-config]]
-            [org.zalando.stups.pierone.storage :as s])
+            [org.zalando.stups.pierone.storage :as s]
+            [org.zalando.stups.pierone.audit :as audit])
   (:import (java.sql SQLException)
 
            (java.util UUID)
@@ -119,7 +120,7 @@
 
 (defn put-tag
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable. 'latest' is not allowed."
-  [parameters request db _ _ {:keys [log-fn]}]
+  [{:keys [team name artifact] :as parameters} request db _ api-config {:keys [log-fn]}]
   (auth/require-write-access (:team parameters) request)
   (let [connection {:connection db}
         tag-name (:name parameters)
@@ -130,6 +131,14 @@
       (try
         (sql/create-tag! params-with-user connection)
         (log/info "Stored new tag %s." params-with-user)
+        (let [tag-info {:team team
+                        :artifact artifact
+                        :tag name
+                        :repository (:repository api-config)}
+              scm-source (sql/get-scm-source
+                           tag-info
+                           {:connection db})]
+          (log-fn (audit/tag-uploaded (:tokeninfo request) scm-source tag-info)))
         (resp "OK" request)
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
