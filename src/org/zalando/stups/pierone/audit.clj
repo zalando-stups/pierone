@@ -8,11 +8,12 @@
 
 (defn tag-uploaded [tokeninfo scm-source tag-data]
   {:event_type   {:namespace "cloud.zalando.com"
-                  :name      "docker-image-uploaded"
-                  :version   "1"}
+                  :name      "docker-tag-uploaded"
+                  :version   "3"}
    :triggered_at (get-date)
    :triggered_by {:type       "USER"
                   :id         (get tokeninfo "uid")
                   :additional {:realm (get tokeninfo "realm")}}
-   :payload      {:scm_source scm-source
-                  :tag        tag-data}})
+   :payload      (merge (when scm-source
+                          {:scm_source scm-source})
+                        {:tag tag-data})})
