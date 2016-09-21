@@ -8,3 +8,4 @@ data/
 .nrepl*
 scm-source.json
 dev-config.edn
+/credentials
