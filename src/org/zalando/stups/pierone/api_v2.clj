@@ -297,9 +297,9 @@
         (let [tag-info {:team team
                         :artifact artifact
                         :tag name}
-              scm-source (sql/get-scm-source
-                           tag-info
-                           {:connection db})]
+              scm-source (first (sql/get-scm-source
+                                  tag-info
+                                  {:connection db}))]
           (log-fn
             (audit/tag-uploaded
               tokeninfo
