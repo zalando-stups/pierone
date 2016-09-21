@@ -17,7 +17,7 @@
   [default-configuration]
   (System/setProperty "hystrix.command.default.execution.timeout.enabled" "false")
   (let [configuration (config/load-configuration
-                        (system/default-http-namespaces-and :storage :db :api :httplogger)
+                        (system/default-http-namespaces-and :storage :db :api :httplogger :oauth2)
                         [api/default-http-configuration
                          sql/default-db-configuration
                          storage/default-storage-configuration
