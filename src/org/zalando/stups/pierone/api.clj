@@ -14,21 +14,21 @@
   (or (:http-api-definition-suffix env) ""))
 
 ; define the API component and its dependencies
-(def-http-component API (str "api/pierone-api" api-definition-suffix ".yaml") [db storage api-config])
+(def-http-component API (str "api/pierone-api" api-definition-suffix ".yaml") [db storage api-config httplogger])
 
 (def default-http-configuration
   {:http-port 8080})
 
 (defn read-teams
   "Lists all teams that have artifacts."
-  [_ _ db _ _]
+  [_ _ db _ _ _]
   (let [result (map :team (sql/cmd-list-teams {} {:connection db}))]
     (-> (ring/response result)
         (fring/content-type-json))))
 
 (defn read-artifacts
   "Lists all artifacts of a team."
-  [parameters _ db _ _]
+  [parameters _ db _ _ _]
   (let [result (map :artifact (sql/cmd-list-artifacts parameters {:connection db}))]
     (-> (ring/response result)
         (fring/content-type-json))))
@@ -43,7 +43,7 @@
 
 (defn read-tags
   "Lists all tags of an artifact."
-  [parameters _ db _ {:keys [clair-url]}]
+  [parameters _ db _ {:keys [clair-url]} _]
   (let [result (sql/cmd-list-tags parameters {:connection db})]
     (if (seq result)
         ; issue #20
@@ -57,7 +57,7 @@
 
 (defn get-scm-source
   "Get SCM source information"
-  [parameters _ db _ _]
+  [parameters _ db _ _ _]
   (let [result (first (sql/cmd-get-scm-source parameters {:connection db}))]
     (-> (ring/response result)
         (ring/status (if result 200 404))
@@ -65,7 +65,7 @@
 
 (defn list-tags-for-image
   "Returns tags that point to this image"
-  [parameters _ db _ _]
+  [parameters _ db _ _ _]
   (let [conn {:connection db}
         images (sql/cmd-get-images parameters conn)]
     (if (seq images)
@@ -97,7 +97,7 @@
 
 (defn get-team-stats
   "Returns statistics for a single team"
-  [{:keys [team]} _ db _ _]
+  [{:keys [team]} _ db _ _ _]
   (let [conn {:connection db}
         result (load-stats team db)]
     (-> result
@@ -106,7 +106,7 @@
 
 (defn get-teams-stats
   "Returns statistics for all teams that have an artifact"
-  [_ _ db _ _]
+  [_ _ db _ _ _]
   (let [conn {:connection db}
         teams (map :team (sql/cmd-list-teams nil conn))
         result (map #(assoc {} :team %
@@ -117,7 +117,7 @@
         (fring/content-type-json))))
 
 (defn get-overall-stats
-  [_ _ db _ _]
+  [_ _ db _ _ _]
   (let [conn {:connection db}
         teams (count (sql/cmd-list-teams nil conn))
         storage (:total (first (sql/cmd-get-total-storage nil conn)))

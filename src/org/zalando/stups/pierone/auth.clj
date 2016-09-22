@@ -24,7 +24,7 @@
   ; either user has write access to all (service user)
   ; or user belongs to a team (employee user)
   (when (get-in request [:configuration :tokeninfo-url])
-    (when-not (get tokeninfo "application.write_all")
+    (when-not (some #{"application.write_all"} (:scope tokeninfo))
       (user/require-realms #{"services" "employees"} request)
       (case (get tokeninfo "realm")
         "/services" (do

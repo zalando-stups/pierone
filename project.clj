@@ -7,7 +7,7 @@
   :min-lein-version "2.0.0"
 
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.zalando.stups/friboo "1.9.0"]
+                 [org.zalando.stups/friboo "1.10.0"]
                  [yesql "0.5.1"]
                  [cheshire "5.6.0"]
                  [digest "1.4.4"]
@@ -42,6 +42,10 @@
                   ["vcs" "push"]]
 
   :aliases {"cloverage" ["with-profile" "test" "cloverage"]}
+
+  :test-selectors {:default     :integration
+                   :unit        :unit
+                   :integration :integration}
 
   :profiles {:uberjar {:aot :all}
 

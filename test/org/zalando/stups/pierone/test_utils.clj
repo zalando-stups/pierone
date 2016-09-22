@@ -67,7 +67,8 @@
 (defn setup
   "Starts Pierone."
   []
-  (run {:api-clair-url "https://clair.example.com"}))
+  (run {:api-clair-url "https://clair.example.com"
+        :httplogger-api-url "https://httplogger.example.com"}))
 
 (defn push-images
   "Pushes images and verifies"
@@ -89,3 +90,9 @@
                                 (:id image)
                                 "/layer")
                         (http-opts (io/input-stream (:data image)))))))
+
+(defrecord NoTokenRefresher
+  [configuration]
+  com.stuartsierra.component/Lifecycle
+  (start [this] this)
+  (stop [this] this))

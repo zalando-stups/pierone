@@ -16,7 +16,8 @@
             [clojure.data.codec.base64 :as b64]
             [com.netflix.hystrix.core :refer [defcommand]]
             [org.zalando.stups.friboo.config :refer [require-config]]
-            [org.zalando.stups.pierone.storage :as s])
+            [org.zalando.stups.pierone.storage :as s]
+            [org.zalando.stups.pierone.audit :as audit])
   (:import (java.sql SQLException)
 
            (java.util UUID)
@@ -57,12 +58,12 @@
 
 (defn ping
   "Client checks for compatibility."
-  [_ request _ _ _]
+  [_ request _ _ _ _]
   (resp true request))
 
 (defn search
   "Dummy call. Searches for repositories."
-  [{:keys [q] :as parameters} request db _ _]
+  [{:keys [q] :as parameters} request db _ _ _]
   (let [repos (sql/cmd-search-repos parameters {:connection db})
         num-results (count repos)]
     (resp {:results     repos
@@ -74,7 +75,7 @@
 
 (defn put-repo
   "Dummy call."
-  [{:keys [team]} request _ _ _]
+  [{:keys [team]} request _ _ _ _]
   (auth/require-write-access team request)
   (resp "OK" request))
 
@@ -102,7 +103,7 @@
 (defn get-tags
   "Get a map of all tags for an artifact with its images. Also includes a 'latest' tag
    that references the image of the most recently created tag."
-  [{:keys [team artifact]} request db _ _]
+  [{:keys [team artifact]} request db _ _ _]
   (let [tags (load-tags team artifact db)]
     (if (empty? tags)
         (resp {} request :status 404)
@@ -110,7 +111,7 @@
 
 (defn get-image-for-tag
   "Get the image id for given tag"
-  [{:keys [team artifact name]} request db _ _]
+  [{:keys [team artifact name]} request db _ _ _]
   (let [tags (load-tags team artifact db)
         image-id (get tags name)]
     (if (valid-image-v1 image-id)
@@ -119,7 +120,7 @@
 
 (defn put-tag
   "Stores a tag. Only '*-SNAPSHOT' tags are mutable. 'latest' is not allowed."
-  [parameters request db _ _]
+  [{:keys [team name artifact] :as parameters} request db _ api-config {:keys [log-fn]}]
   (auth/require-write-access (:team parameters) request)
   (let [connection {:connection db}
         tag-name (:name parameters)
@@ -130,6 +131,14 @@
       (try
         (sql/create-tag! params-with-user connection)
         (log/info "Stored new tag %s." params-with-user)
+        (let [tag-info {:team team
+                        :artifact artifact
+                        :tag name
+                        :repository (:repository api-config)}
+              scm-source (first (sql/get-scm-source
+                                  tag-info
+                                  {:connection db}))]
+          (log-fn (audit/tag-uploaded (:tokeninfo request) scm-source tag-info)))
         (resp "OK" request)
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
@@ -150,17 +159,17 @@
 (defn put-images
   "Dummy call. this is the final call from Docker client when pushing an image
    Docker client expects HTTP status code 204 (No Content) instead of 200 here!"
-  [_ request _ _ _]
+  [_ request _ _ _ _]
   (resp "" request :status 204))
 
 (defn get-images
   "Dummy call."
-  [_ request _ _ _]
+  [_ request _ _ _ _]
   (resp [] request))
 
 (defn put-image-json
   "Stores an image's JSON metadata. First call in upload sequence."
-  [{:keys [image metadata]} request db _ _]
+  [{:keys [image metadata]} request db _ _ _]
   (try
     (sql/delete-unaccepted-image! {:image image} {:connection db})
     (sql/create-image!
@@ -179,7 +188,7 @@
 
 (defn get-image-json
   "Returns an image's metadata."
-  [parameters request db _ _]
+  [parameters request db _ _ _]
   (let [result (sql/cmd-get-image-metadata parameters {:connection db})]
     (if (or (empty? result) (not (valid-image-v1 (:image parameters))))
       (resp "image not found" request :status 404)
@@ -213,7 +222,7 @@
 
 (defn put-image-binary
   "Stores an image's binary data. Second call in upload sequence."
-  [{:keys [image data]} request db storage _]
+  [{:keys [image data]} request db storage _ _]
   (let [^File tmp-file (io/file (:directory storage)
                                 (str image ".tmp-" (UUID/randomUUID)))
         connection {:connection db}]
@@ -231,19 +240,19 @@
 
 (defn get-image-binary
   "Reads the binary data of an image."
-  [{:keys [image]} request _ storage _]
+  [{:keys [image]} request _ storage _ _]
   (if-let [data (load-image storage image)]
     (resp data request :binary? true)
     (resp "image not found" request :status 404)))
 
 (defn put-image-checksum
   "Dummy call."
-  [_ request _ _ _]
+  [_ request _ _ _ _]
   (resp "OK" request))
 
 (defn get-image-ancestry
   "Returns the whole ancestry of an image."
-  [params request db _ _]
+  [params request db _ _ _]
   (let [ancestry (map :id
                       (sql/cmd-get-image-ancestry params {:connection db}))]
     (if (empty? ancestry)
@@ -252,9 +261,9 @@
 
 (defn post-users
   "Special handler for docker client"
-  [_ request _ _ _]
+  [_ request _ _ _ _]
   (resp "Not supported, please use GET /v1/users" request :status 401))
 
 (defn login
-  [_ request _ _ _]
+  [_ request _ _ _ _]
   (resp "Login successful" request))

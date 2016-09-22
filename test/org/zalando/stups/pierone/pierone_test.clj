@@ -9,7 +9,7 @@
             [com.stuartsierra.component :as component]
             [midje.sweet :refer :all]))
 
-(deftest wrap-midje-facts
+(deftest ^:unit wrap-midje-facts
 
   (facts "get-clair-link"
     (get-clair-link {} "foo") => nil
@@ -20,14 +20,14 @@
   (facts "read-tags"
 
     (fact "When clair-url is set, generates a link to clair"
-      (read-tags ..parameters.. nil ..db.. nil {:clair-url "https://clair.example.com"})
+      (read-tags ..parameters.. nil ..db.. nil {:clair-url "https://clair.example.com"} ..logger..)
       => (contains {:status 200 :body [{:clair_id      "sha256:42"
                                         :clair_details "https://clair.example.com/v1/layers/sha256:42"}]})
       (provided
         (sql/cmd-list-tags ..parameters.. {:connection ..db..}) => [{:clair_id "sha256:42"}]))
 
     (fact "When clair-url is not set, generates nil"
-      (read-tags ..parameters.. nil ..db.. nil nil)
+      (read-tags ..parameters.. nil ..db.. nil nil ..logger..)
       => (contains {:status 200 :body [{:clair_id      "sha256:42"
                                         :clair_details nil}]})
       (provided
@@ -35,89 +35,90 @@
 
   )
 
-(deftest pierone-test
-  (let [system (u/setup)
-        root (first d/images-hierarchy)
-        alt (second d/images-hierarchy)]
+(deftest ^:integration pierone-test
+  (with-redefs [org.zalando.stups.friboo.system.oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher]
+    (let [system (u/setup)
+          root (first d/images-hierarchy)
+          alt (second d/images-hierarchy)]
 
-    (u/wipe-db system)
-    (u/push-images d/images-hierarchy)
+      (u/wipe-db system)
+      (u/push-images d/images-hierarchy)
 
-    ; tag root image as regular tag
-    (u/expect 200 (client/put (u/v1-url "/repositories/" (:team d/tag)
-                                        "/" (:artifact d/tag)
-                                        "/tags/" (:name d/tag))
-                              (u/http-opts (u/wrap-quotes (:id root))
-                                           :json)))
-    ; tag alt image as snapshot tag
-    (u/expect 200 (client/put (u/v1-url "/repositories/" (:team d/snapshot-tag)
-                                        "/" (:artifact d/snapshot-tag)
-                                        "/tags/" (:name d/snapshot-tag))
-                              (u/http-opts (u/wrap-quotes (:id alt))
-                                           :json)))
+      ; tag root image as regular tag
+      (u/expect 200 (client/put (u/v1-url "/repositories/" (:team d/tag)
+                                  "/" (:artifact d/tag)
+                                  "/tags/" (:name d/tag))
+                      (u/http-opts (u/wrap-quotes (:id root))
+                        :json)))
+      ; tag alt image as snapshot tag
+      (u/expect 200 (client/put (u/v1-url "/repositories/" (:team d/snapshot-tag)
+                                  "/" (:artifact d/snapshot-tag)
+                                  "/tags/" (:name d/snapshot-tag))
+                      (u/http-opts (u/wrap-quotes (:id alt))
+                        :json)))
 
-    ; reverse image search
-    (is (= 200
-           (:status (client/get (u/p1-url "/tags/" (:id root))))))
+      ; reverse image search
+      (is (= 200
+            (:status (client/get (u/p1-url "/tags/" (:id root))))))
 
-    (let [result (-> (client/get (u/p1-url "/tags/" (:id root)))
+      (let [result (-> (client/get (u/p1-url "/tags/" (:id root)))
                      (:body)
                      (json/parse-string keyword)
                      (first))]
-      (is (= (:artifact result)
-             (:artifact d/tag)))
-      (is (= (:team result)
-             (:team d/tag)))
-      (is (= (:name result)
-             (:name d/tag))))
+        (is (= (:artifact result)
+              (:artifact d/tag)))
+        (is (= (:team result)
+              (:team d/tag)))
+        (is (= (:name result)
+              (:name d/tag))))
 
-    (is (= 404 (:status (client/get (u/p1-url "/tags/asdfa")
-                                    (u/http-opts)))))
-    (is (= 412 (:status (client/get (u/p1-url "/tags/abc")
-                                    (u/http-opts)))))
+      (is (= 404 (:status (client/get (u/p1-url "/tags/asdfa")
+                            (u/http-opts)))))
+      (is (= 412 (:status (client/get (u/p1-url "/tags/abc")
+                            (u/http-opts)))))
 
 
-    ; check tag list for not existing artifact -> not ok
-    (is (= 404 (:status (client/get (u/p1-url "/teams/"
-                                              (:team d/tag)
-                                              "/artifacts/asdfasdf"
-                                              "/tags")
-                                    (u/http-opts)))))
+      ; check tag list for not existing artifact -> not ok
+      (is (= 404 (:status (client/get (u/p1-url "/teams/"
+                                        (:team d/tag)
+                                        "/artifacts/asdfasdf"
+                                        "/tags")
+                            (u/http-opts)))))
 
-    (is (= 200 (:status (client/get (u/p1-url "/teams/" (:team d/tag)
-                                              "/artifacts/" (:artifact d/tag)
-                                              "/tags")
-                                    (u/http-opts)))))
+      (is (= 200 (:status (client/get (u/p1-url "/teams/" (:team d/tag)
+                                        "/artifacts/" (:artifact d/tag)
+                                        "/tags")
+                            (u/http-opts)))))
 
-    ; check stats endpoint
-    (let [resp (client/get (u/p1-url "/stats/teams/" (:team d/tag))
-                           (u/http-opts))
-          stats (json/parse-string (:body resp) keyword)]
-      (is (= 200 (:status resp)))
-      (println stats)
-      ; kio is the only artifact
-      (is (= 1
-             (:artifacts stats)))
-      ; regular tag and snapshot tag
-      (is (= 2
-             (:tags stats))))
+      ; check stats endpoint
+      (let [resp (client/get (u/p1-url "/stats/teams/" (:team d/tag))
+                   (u/http-opts))
+            stats (json/parse-string (:body resp) keyword)]
+        (is (= 200 (:status resp)))
+        (println stats)
+        ; kio is the only artifact
+        (is (= 1
+              (:artifacts stats)))
+        ; regular tag and snapshot tag
+        (is (= 2
+              (:tags stats))))
 
-    (let [resp (client/get (u/p1-url "/stats/teams")
-                           (u/http-opts))
-          stats (json/parse-string (:body resp) keyword)]
-      (is (= 200 (:status resp)))
-      (is (= 1 (count stats)))
-      (println stats)
-      (is (:team (first stats))
+      (let [resp (client/get (u/p1-url "/stats/teams")
+                   (u/http-opts))
+            stats (json/parse-string (:body resp) keyword)]
+        (is (= 200 (:status resp)))
+        (is (= 1 (count stats)))
+        (println stats)
+        (is (:team (first stats))
           (:team d/tag)))
 
-    (let [resp (client/get (u/p1-url "/stats")
-                           (u/http-opts))
-          stats (json/parse-string (:body resp) keyword)]
-      (is (= 200 (:status resp)))
-      (println stats)
-      (is (= 1 (:teams stats)))
-      (is (= 24 (:storage stats))))
+      (let [resp (client/get (u/p1-url "/stats")
+                   (u/http-opts))
+            stats (json/parse-string (:body resp) keyword)]
+        (is (= 200 (:status resp)))
+        (println stats)
+        (is (= 1 (:teams stats)))
+        (is (= 24 (:storage stats))))
 
-    ; stop
-    (component/stop system)))
+      ; stop
+      (component/stop system))))
