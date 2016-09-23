@@ -12,7 +12,7 @@
         .scm-source.
         .tag-data.) => (just {:event_type   {:namespace "cloud.zalando.com"
                                              :name      "docker-tag-uploaded"
-                                             :version   "4"}
+                                             :version   "1"}
                               :triggered_at #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z"
                               :triggered_by {:type       "USER"
                                              :id         .uid.
