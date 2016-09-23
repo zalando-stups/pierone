@@ -9,7 +9,7 @@
 (defn tag-uploaded [tokeninfo scm-source tag-data]
   {:event_type   {:namespace "cloud.zalando.com"
                   :name      "docker-tag-uploaded"
-                  :version   "4"}
+                  :version   "1"}
    :triggered_at (get-date)
    :triggered_by {:type       "USER"
                   :id         (get tokeninfo "uid")
