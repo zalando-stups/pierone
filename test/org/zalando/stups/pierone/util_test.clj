@@ -19,16 +19,15 @@
     (fact "does not throw if scope is in tokeninfo"
       (auth/require-scope request "foo.bar") => nil))
 
-  ;; TODO fix the tests
-  (future-facts "auth/require-write-access"
-                (fact "is cached"
-                  (auth/require-write-access "team" request) => nil
-                  (auth/require-write-access "team" request) => nil
-                  (provided
-                    (fauth/require-auth request "team") => nil :times 1))
+  (facts "auth/require-write-access"
+    (fact "is cached"
+      (auth/require-write-access "team" request) => nil
+      (auth/require-write-access "team" request) => nil
+      (provided
+        (fauth/require-auth request "team") => nil :times 1))
     (fact "only works with tokeninfo url configured"
       (auth/require-write-access "foo" {}) => nil)
-    (future-fact "calls require-auth"
+    (fact "calls require-auth"
       (auth/require-write-access "team" request) => (throws Exception)
       (provided
         (auth/cached-require-auth request "team") => (throws Exception))))
