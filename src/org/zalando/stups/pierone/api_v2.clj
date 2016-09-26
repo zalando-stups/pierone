@@ -243,6 +243,7 @@
   [manifest]
   (let [schema-version (:schemaVersion manifest)]
     (condp = schema-version
+      1 (map :blobSum (:fsLayers manifest))
       2 (apply conj
                [(get-in manifest [:config :digest])]
                (map :digest (:layers manifest)))
@@ -338,6 +339,7 @@
           schema-version (get parsed-manifest "schemaVersion")
           pretty (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
           set-header-fn #(condp = schema-version
+                          1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
                           2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
                           (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
                           %)]
