@@ -120,16 +120,16 @@
               (client/put (u/v2-url "/myteam/myart/manifests/1.0")
                           (u/http-opts (io/input-stream (:bytes d/manifest-v4)))))
 
-      (expect 400
-              ; manifest v1 format no longer supported
+      (expect 201
               (client/put (u/v2-url "/myteam/myart/manifests/1.0")
                           (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
 
-      (expect 201
+      (expect 409
+              ; duplicate tag
               (client/put (u/v2-url "/myteam/myart/manifests/1.0")
                           (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
 
-      (is (= (:pretty d/manifest-v2)
+      (is (= (:pretty d/manifest-v1)
              (expect 200
                      (client/get (u/v2-url "/myteam/myart/manifests/1.0")
                                  (u/http-opts)))))
@@ -156,17 +156,37 @@
       ; check that *-SNAPSHOT tags are mutable
       (expect 201
               (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                          (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
+                          (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
 
       ; works, no changes
       (expect 201
               (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
-                          (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
+                          (u/http-opts (io/input-stream (:bytes d/manifest-v1)))))
 
       (let [response (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
                                  (u/http-opts))]
+        (is (= "application/vnd.docker.distribution.manifest.v1+prettyjws"
+               (get-in response [:headers "Content-Type"]))))
+
+      ; update, new manifest
+      (expect 201
+              (client/put (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
+                          (u/http-opts (io/input-stream (:bytes d/manifest-v1-multilayer)))))
+
+      (is (= (:pretty d/manifest-v1-multilayer)
+             (expect 200
+                     (client/get (u/v2-url "/myteam/myart/manifests/1.0-SNAPSHOT")
+                                 (u/http-opts)))))
+
+      (expect 201 (client/put (u/v2-url "/myteam/myart/manifests/2.0-SNAPSHOT")
+                              (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
+
+      (let [response (client/get (u/v2-url "/myteam/myart/manifests/2.0-SNAPSHOT")
+                                 (u/http-opts))]
+
         (is (= "application/vnd.docker.distribution.manifest.v2+json"
                (get-in response [:headers "Content-Type"]))))
+
 
       ; stop
       (component/stop system))))
