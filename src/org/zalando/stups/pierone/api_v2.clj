@@ -252,7 +252,7 @@
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
-  [{:keys [team artifact name data]} request db _ api-config {:keys [log-fn]}]
+  [{:keys [team artifact name data]} request db _ api-config audit-logger]
   (auth/require-write-access team request)
   (let [manifest (read-manifest data)
         connection {:connection db}
@@ -261,7 +261,6 @@
         fs-layers (get-fs-layers manifest)
         clair-hashes (clair/prepare-hashes-for-clair manifest)
         topmost-layer-clair-id (-> clair-hashes last :current :clair-id)
-        ;; TODO get registry URL from config
         registry (:callback-url api-config)
         clair-sqs-messages (map (partial clair/create-sqs-message registry team artifact) clair-hashes)
         digest (first fs-layers)
@@ -292,23 +291,25 @@
               (log/warn "No API_CLAIR_PUSH_LAYER_QUEUE_REGION or API_CLAIR_PUSH_LAYER_QUEUE_URL, not submitting to Clair.")
               (do
                 (log/info "Submitting image to Clair: %s" topmost-layer-clair-id)
-                (clair/send-sqs-message queue-region queue-url clair-sqs-messages)))))
-        (log/info "Stored new tag %s." tag-ident)
-        ; write audit log
-        (let [tag-info {:team team
-                        :artifact artifact
-                        :tag name}
-              scm-source (first (sql/get-scm-source
-                                  tag-info
-                                  {:connection db}))]
-          (log-fn
-            (audit/tag-uploaded
-              tokeninfo
-              scm-source
-              {:team team
-               :artifact artifact
-               :tag name
-               :repository (:repository api-config)})))
+                (clair/send-sqs-message queue-region queue-url clair-sqs-messages))))
+          (log/info "Stored new tag %s." tag-ident)
+          ; write audit log
+          (if-not (:enabled audit-logger)
+            (log/warn "No HTTPLOGGER_API_URL, not set. Not going to send Audit-Trail event")
+            (let [tag-info {:team team
+                            :artifact artifact
+                            :tag name}
+                  scm-source (first (sql/get-scm-source
+                                      tag-info
+                                      {:connection db}))]
+              ((:log-fn audit-logger)
+                (audit/tag-uploaded
+                  tokeninfo
+                  scm-source
+                  {:team team
+                   :artifact artifact
+                   :tag name
+                   :repository (:repository api-config)})))))
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest"
                          (str "sha256:"
