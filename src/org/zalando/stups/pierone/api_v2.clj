@@ -250,6 +250,9 @@
       ; else
       (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
 
+(defn prefixed-digest [text]
+  (str "sha256:" (digest/sha-256 text)))
+
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload sequence."
   [{:keys [team artifact name data]} request db _ api-config {:keys [log-fn]}]
@@ -265,14 +268,17 @@
         registry (:callback-url api-config)
         clair-sqs-messages (map (partial clair/create-sqs-message registry team artifact) clair-hashes)
         digest (first fs-layers)
-        params-with-user {:team      team
-                          :artifact  artifact
-                          :name      name
-                          :image     digest
-                          :manifest  (json/generate-string manifest {:pretty true})
-                          :fs_layers fs-layers
-                          :user      uid
-                          :clair_id  topmost-layer-clair-id}
+        pretty-manifest-str (json/encode data {:pretty (get-json-pretty-printer)})
+        content-digest (prefixed-digest pretty-manifest-str)
+        params-with-user {:team           team
+                          :artifact       artifact
+                          :name           name
+                          :image          digest
+                          :manifest       (json/generate-string manifest {:pretty true})
+                          :fs_layers      fs-layers
+                          :user           uid
+                          :clair_id       topmost-layer-clair-id
+                          :content_digest content-digest}
         tag-ident (str team "/" artifact ":" name)]
     (when-not (seq fs-layers)
       (api/throw-error 400 "manifest has no FS layers"))
@@ -310,11 +316,7 @@
                :tag name
                :repository (:repository api-config)})))
         (-> (resp "OK" request :status 201)
-            (ring/header "Docker-Content-Digest"
-                         (str "sha256:"
-                              (-> data
-                                  (json/encode {:pretty (get-json-pretty-printer)})
-                                  (digest/sha-256)))))
+            (ring/header "Docker-Content-Digest" content-digest))
 
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
@@ -337,15 +339,15 @@
   (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
     (let [parsed-manifest (json/decode manifest)
           schema-version (get parsed-manifest "schemaVersion")
-          pretty (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
+          pretty-manifest-str (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
           set-header-fn #(condp = schema-version
                           1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
                           2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
                           (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
                           %)]
-      (-> (resp pretty request)
+      (-> (resp pretty-manifest-str request)
           (set-header-fn)
-          (ring/header "Docker-Content-Digest" (str "sha256:" (digest/sha-256 pretty)))))
+          (ring/header "Docker-Content-Digest" (prefixed-digest pretty-manifest-str))))
     (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))
 
 (defn list-tags
