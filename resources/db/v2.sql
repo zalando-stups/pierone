@@ -20,13 +20,14 @@ UPDATE images
 
 -- name: create-manifest!
 INSERT INTO tags
-       (t_team, t_artifact, t_name, t_manifest, t_image_id, t_fs_layers, t_created_by, t_clair_id)
-VALUES (:team, :artifact, :name, :manifest, :image, ARRAY[ :fs_layers ], :user, :clair_id);
+       (t_team, t_artifact, t_name, t_manifest, t_image_id, t_fs_layers, t_created_by, t_clair_id, t_content_digest)
+VALUES (:team, :artifact, :name, :manifest, :image, ARRAY[ :fs_layers ], :user, :clair_id, :content_digest);
 
 -- name: update-manifest!
 UPDATE tags
    SET t_image_id = :image,
        t_manifest = :manifest,
+       t_content_digest = :content_digest,
        t_fs_layers = ARRAY[ :fs_layers ],
        -- updating is like overwriting (delete+create)
        -- i.e. update created timestamp and user
@@ -43,7 +44,7 @@ SELECT t_manifest AS manifest
   FROM tags
  WHERE t_team = :team
    AND t_artifact = :artifact
-   AND t_name = :name;
+   AND (t_name = :name OR t_content_digest = :name);
 
 -- name: get-latest
 SELECT t_name AS name
