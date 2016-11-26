@@ -333,10 +333,18 @@
               (log/warn "Prevented update of tag %s: %s" tag-ident (str e))
               (resp (get-error-response :TAG_INVALID {"Tag" name}) request :status 409))))))))
 
+(defn load-manifest
+  "Loads manifest from the DB, resolves `latest` tag automatically"
+  [{:keys [team artifact name]} db]
+  (when-let [real-name (if (= "latest" name)
+                         (:name (first (sql/get-latest {:team team :artifact artifact} {:connection db})))
+                         name)]
+    (:manifest (first (sql/get-manifest {:team team :artifact artifact :name real-name} {:connection db})))))
+
 (defn get-manifest
   "get"
   [parameters request db _ _ _]
-  (if-let [manifest (:manifest (first (sql/get-manifest parameters {:connection db})))]
+  (if-let [manifest (load-manifest parameters db)]
     (let [parsed-manifest (json/decode manifest)
           schema-version (get parsed-manifest "schemaVersion")
           pretty-manifest-str (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})

@@ -46,6 +46,14 @@ SELECT t_manifest AS manifest
    AND t_artifact = :artifact
    AND (t_name = :name OR t_content_digest = :name);
 
+-- name: get-latest
+SELECT t_name AS name
+  FROM tags
+ WHERE t_team = :team
+   AND t_artifact = :artifact
+ ORDER BY t_created DESC
+ LIMIT 1;
+
 -- name: list-tag-names
 SELECT t_name AS name
   FROM tags
