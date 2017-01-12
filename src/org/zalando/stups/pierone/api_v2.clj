@@ -254,20 +254,21 @@
   (str "sha256:" (digest/sha-256 text)))
 
 (defn put-manifest
-  "Stores an image's JSON metadata. Last call in upload sequence."
+  "Stores an image's JSON metadata. Last call in upload (docker push) sequence."
   [{:keys [team artifact name data]} request db _ api-config {:keys [log-fn]}]
   (auth/require-write-access team request)
   (let [manifest (read-manifest data)
-        connection {:connection db}
         tokeninfo (:tokeninfo request)
         uid (get tokeninfo "uid")
         fs-layers (get-fs-layers manifest)
         clair-hashes (clair/prepare-hashes-for-clair manifest)
         topmost-layer-clair-id (-> clair-hashes last :current :clair-id)
-        ;; TODO get registry URL from config
         registry (:callback-url api-config)
         clair-sqs-messages (map (partial clair/create-sqs-message registry team artifact) clair-hashes)
         digest (first fs-layers)
+        ;; For integration tests, data is only readable once, and pretty-manifest-str is always:
+        ;;  "Some org.eclipse.jetty.server.HttpInputOverHTTP. Content omitted."
+        ;; However, mysteriously in normal runs it's ok
         pretty-manifest-str (json/encode data {:pretty (get-json-pretty-printer)})
         content-digest (prefixed-digest pretty-manifest-str)
         params-with-user {:team           team
@@ -321,7 +322,7 @@
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
           (if (.endsWith name "-SNAPSHOT")
-            (let [updated-rows (sql/update-manifest! params-with-user connection)]
+            (let [updated-rows (sql/update-manifest! params-with-user {:connection db})]
               (if (pos? updated-rows)
                 (do
                   (log/info "Updated snapshot tag %s." tag-ident)
