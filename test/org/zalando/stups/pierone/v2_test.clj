@@ -144,6 +144,11 @@
                      (client/get (u/v2-url "/myteam/myart/manifests/latest")
                                  (u/http-opts)))))
 
+      (is (= (:pretty d/manifest-v1)
+             (expect 200
+                     (client/get (u/v2-url "/myteam/myart/manifests/sha256:b0ebea73273b4d5a334d74cd826a2327f260fe5212613937add8b5e171bf49bd")
+                                 (u/http-opts)))))
+
       (is (= "{\"name\":\"myteam/myart\",\"tags\":[\"1.0\"]}"
              (expect 200
                      (client/get (u/v2-url "/myteam/myart/tags/list")
