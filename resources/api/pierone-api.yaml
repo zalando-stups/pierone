@@ -796,6 +796,32 @@ paths:
         "404":
           description: Image not found
 
+  /teams/{team}/artifacts/{artifact}/recheck:
+    post:
+      summary: Rescan all images of an artifact
+      description: Submit all images of a single artifact to Clair for security rescan
+      tags:
+        - Pier One API
+      operationId: org.zalando.stups.pierone.api/post-recheck-artifact-images!
+      security:
+        - oauth2: [uid]
+      parameters:
+        - name: team
+          in: path
+          required: true
+          type: string
+        - name: artifact
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Clair integration is not configured, nothing is done
+        "202":
+          description: Successfully resubmitted the images
+        "404":
+          description: No images found
+
   /tags/{image}:
     get:
       summary: List tags for image

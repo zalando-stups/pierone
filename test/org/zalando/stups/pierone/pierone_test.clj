@@ -145,6 +145,15 @@
                 :message            "Image resubmitted"}
                (:body resp))))
 
+      (let [resp (client/post (u/p1-url "/teams/myteam/artifacts/myart/recheck")
+                              (merge (u/http-opts)
+                                     {:as :json}))]
+        (is (= 202 (:status resp)))
+        (is (= {:message "Images resubmitted"
+                :tags    [{:name     "1.0"
+                           :id       "sha256:a5c741c7dea3a96944022b4b9a0b1480cfbeef5f4cc934850e8afacb48e18c5e"
+                           :clair-id "sha256:e5d6433ddaf1c332d356a026a065c874bc0ef2553650a8134356320679076d7b"}]}
+               (:body resp))))
 
       ; stop
       (component/stop system))))
