@@ -772,7 +772,7 @@ paths:
       description: Submit the image to Clair for security rescan
       tags:
         - Pier One API
-      operationId: org.zalando.stups.pierone.api/post-recheck!
+      operationId: org.zalando.stups.pierone.api/post-recheck-image!
       security:
         - oauth2: [uid]
       parameters:

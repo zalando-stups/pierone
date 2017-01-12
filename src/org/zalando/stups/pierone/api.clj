@@ -129,7 +129,7 @@
         (ring/response)
         (fring/content-type-json))))
 
-(defn post-recheck!
+(defn post-recheck-image!
   "Resubmit an image to Clair for security checking."
   [{:as params :keys [team artifact]} _ db _ api-config _]
   (prn params)
