@@ -56,12 +56,13 @@
       (provided
         (auth/require-write-access "team" request) => nil))))
 
-
-(defn expect [status-code response]
-  (is (= (:status response)
-        status-code)
-    (apply str "response of wrong status: " response))
-  (:body response))
+(defmacro expect [status-code expression]
+  `(let [status-code# ~status-code
+         response# ~expression]
+    (is (= (:status response#)
+           status-code#)
+        (apply str "response of wrong status: " response#))
+    (:body response#)))
 
 (deftest ^:integration v2-integration-test
   (with-redefs [org.zalando.stups.pierone.clair/send-sqs-message (fn [& _])

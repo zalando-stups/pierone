@@ -57,4 +57,4 @@
       :artifact "kio"
       :name     "1.0-SNAPSHOT"})
 
-(def all-tags (conj [] tag snapshot-tag))
+(def all-tags [tag snapshot-tag])
