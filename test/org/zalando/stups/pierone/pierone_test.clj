@@ -7,7 +7,9 @@
             [cheshire.core :as json]
             [clj-http.client :as client]
             [com.stuartsierra.component :as component]
-            [midje.sweet :refer :all]))
+            [midje.sweet :refer :all]
+            [org.zalando.stups.pierone.clair :as clair]
+            [clojure.java.io :as io]))
 
 (deftest ^:unit wrap-midje-facts
 
@@ -36,7 +38,8 @@
   )
 
 (deftest ^:integration pierone-test
-  (with-redefs [org.zalando.stups.friboo.system.oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher]
+  (with-redefs [org.zalando.stups.friboo.system.oauth2/map->OAUth2TokenRefresher u/map->NoTokenRefresher
+                clair/send-sqs-message (fn [& _])]
     (let [system (u/setup)
           root (first d/images-hierarchy)
           alt (second d/images-hierarchy)]
@@ -119,6 +122,29 @@
         (println stats)
         (is (= 1 (:teams stats)))
         (is (= 24 (:storage stats))))
+
+      ;; Push a v2 image
+      (client/post (u/v2-url "/myteam/myart/blobs/uploads/")
+                   (u/http-opts))
+      (client/patch (u/v2-url "/myteam/myart/blobs/uploads/myuuid")
+                    (u/http-opts (io/input-stream (.getBytes "imgdata"))))
+      (client/put (u/v2-url "/myteam/myart/blobs/uploads/myuuid")
+                  (merge (u/http-opts) {:query-params {"digest" (:digest d/manifest-v1)}}))
+      (client/put (u/v2-url "/myteam/myart/manifests/1.0")
+                  (u/http-opts (io/input-stream (:bytes d/manifest-v1))))
+
+
+      (let [resp (client/post (u/p1-url "/teams/myteam/artifacts/myart/tags/latest/recheck")
+                              (merge (u/http-opts)
+                                     {:as :json}))]
+        (is (= 202 (:status resp)))
+        (is (= {:clair-sqs-messages [{:Layer {:Format     "Docker"
+                                              :Name       "sha256:e5d6433ddaf1c332d356a026a065c874bc0ef2553650a8134356320679076d7b"
+                                              :ParentName nil
+                                              :Path       "foobar/v2/myteam/myart/blobs/sha256:a5c741c7dea3a96944022b4b9a0b1480cfbeef5f4cc934850e8afacb48e18c5e"}}]
+                :message            "Image resubmitted"}
+               (:body resp))))
+
 
       ; stop
       (component/stop system))))

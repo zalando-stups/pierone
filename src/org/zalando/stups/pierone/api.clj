@@ -8,7 +8,9 @@
             [org.zalando.stups.pierone.api-v2]
             [org.zalando.stups.pierone.api-v1]
             [clojure.string :as str]
-            [org.zalando.stups.friboo.ring :as r]))
+            [org.zalando.stups.friboo.ring :as r]
+            [org.zalando.stups.pierone.clair :as clair]
+            [cheshire.core :as json]))
 
 (def api-definition-suffix
   (or (:http-api-definition-suffix env) ""))
@@ -126,3 +128,28 @@
     (-> result
         (ring/response)
         (fring/content-type-json))))
+
+(defn post-recheck!
+  "Resubmit an image to Clair for security checking."
+  [{:as params :keys [team artifact]} _ db _ api-config _]
+  (prn params)
+  (let [queue-url (:clair-layer-push-queue-url api-config)
+        queue-region (:clair-layer-push-queue-region api-config)]
+    (if (some str/blank? [queue-region queue-url])
+      (-> {:message "Clair integration not configured, not doing anything"}
+          (ring/response)
+          (fring/content-type-json))
+      (if-let [manifest-str (org.zalando.stups.pierone.api-v2/load-manifest (assoc params :name (:tag params)) db)]
+        (let [manifest (json/decode manifest-str keyword)
+              clair-hashes (clair/prepare-hashes-for-clair manifest)
+              topmost-layer-clair-id (-> clair-hashes last :current :clair-id)
+              registry (:callback-url api-config)
+              clair-sqs-messages (map (partial clair/create-sqs-message registry team artifact) clair-hashes)]
+          (log/info "Resubmitting image to Clair: %s" topmost-layer-clair-id)
+          (clair/send-sqs-message queue-region queue-url clair-sqs-messages)
+          (-> {:message "Image resubmitted"
+               :clair-sqs-messages clair-sqs-messages}
+              (ring/response)
+              (ring/status 202)
+              (fring/content-type-json)))
+        (ring/not-found nil)))))

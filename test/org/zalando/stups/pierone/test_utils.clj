@@ -37,24 +37,28 @@
 (defn wrap-quotes [string]
   (str "\"" string "\""))
 
-; some expectation helpers
+;; Some expectation helpers.
+;; They have to be macros, otherwise test reports don't show the correct line of failure.
 
-(defn expect-headers [response]
-  (is (= "0.6.3"
-         (get (:headers response)
-              "x-docker-registry-version"))
-      (apply str "response missing registry version header: " response))
-  (is (= "localhost:8080"
-         (get (:headers response)
-              "x-docker-endpoints"))
-      (apply str "response missing endpoints header: " response)))
+(defmacro expect-headers [response]
+  `(do
+     (is (= "0.6.3"
+            (get (:headers ~response)
+                 "x-docker-registry-version"))
+         (apply str "response missing registry version header: " ~response))
+     (is (= "localhost:8080"
+            (get (:headers ~response)
+                 "x-docker-endpoints"))
+         (apply str "response missing endpoints header: " ~response))))
 
-(defn expect [status-code response]
-  (is (= (:status response)
-         status-code)
-      (apply str "response of wrong status: " response))
-  (expect-headers response)
-  (:body response))
+(defmacro expect [status-code expression]
+  `(let [status-code# ~status-code
+         response# ~expression]
+     (is (= (:status response#)
+            status-code#)
+         (apply str "response of wrong status: " response#))
+     (expect-headers response#)
+     (:body response#)))
 
 (defn wipe-db
   [system]
@@ -68,7 +72,10 @@
   "Starts Pierone."
   []
   (run {:api-clair-url "https://clair.example.com"
-        :httplogger-api-url "https://httplogger.example.com"}))
+        :httplogger-api-url "https://httplogger.example.com"
+        :api-clair-layer-push-queue-region "foo"
+        :api-clair-layer-push-queue-url "bar"
+        :api-callback-url "foobar"}))
 
 (defn push-images
   "Pushes images and verifies"
