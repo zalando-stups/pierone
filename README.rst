@@ -28,6 +28,26 @@ Run the development web server with:
 
 The web server will run on port 8080. You can find the Swagger UI on http://localhost:8080/ui/.
 
+Testing with different client versions
+--------------------------------------
+
+Use docker in docker: https://hub.docker.com/r/library/docker/
+
+For example:
+
+```sh
+# First push the image
+$ docker push my-machine-hostname:8080/foo/bar:123
+# Try to pull it using a specific version of docker (1.11)
+# Start the daemon
+$ docker run -it --privileged --name docker11 -d docker:1.11-dind --insecure-registry my-machine-hostname:8080
+# Execute the command
+$ docker run -it --rm --link docker11:docker docker:1.11 docker pull my-machine-hostname:8080/foo/bar:123
+# ... execute more commands
+# Stop the daemon
+$ docker rm -fv docker11
+```
+
 Testing
 =======
 
