@@ -193,10 +193,12 @@
                               (u/http-opts (io/input-stream (:bytes d/manifest-v2)))))
 
       (let [response (client/get (u/v2-url "/myteam/myart/manifests/2.0-SNAPSHOT")
-                                 (u/http-opts))]
+                                 (merge (u/http-opts) {:as :json}))]
 
         (is (= "application/vnd.docker.distribution.manifest.v2+json"
-               (get-in response [:headers "Content-Type"]))))
+               (get-in response [:headers "Content-Type"])))
+        (is (= "application/vnd.docker.container.image.v1+json"
+               (get-in response [:body :config :mediaType]))))
 
 
       ; stop
