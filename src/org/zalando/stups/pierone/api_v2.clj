@@ -335,25 +335,34 @@
               (resp (get-error-response :TAG_INVALID {"Tag" name}) request :status 409))))))))
 
 (defn load-manifest
-  "Loads manifest from the DB, resolves `latest` tag automatically"
+  "Loads manifest as string from the DB, resolves `latest` tag automatically"
   [{:keys [team artifact name]} db]
   (when-let [real-name (if (= "latest" name)
                          (:name (first (sql/get-latest {:team team :artifact artifact} {:connection db})))
                          name)]
     (:manifest (first (sql/get-manifest {:team team :artifact artifact :name real-name} {:connection db})))))
 
+(defn adjust-manifest
+  "To provide compatibility with Docker 1.13, transform config.mediaType"
+  [manifest]
+  (let [existing-config-media-type (get-in manifest ["config" "mediaType"])]
+    (if (= existing-config-media-type "application/json")
+      (assoc-in manifest ["config" "mediaType"]
+                "application/vnd.docker.container.image.v1+json")
+      manifest)))
+
 (defn get-manifest
   "get"
   [parameters request db _ _ _]
   (if-let [manifest (load-manifest parameters db)]
-    (let [parsed-manifest (json/decode manifest)
+    (let [parsed-manifest (adjust-manifest (json/decode manifest))
           schema-version (get parsed-manifest "schemaVersion")
           pretty-manifest-str (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
           set-header-fn #(condp = schema-version
-                          1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
-                          2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
-                          (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
-                          %)]
+                           1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
+                           2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
+                           (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
+                           %)]
       (-> (resp pretty-manifest-str request)
           (set-header-fn)
           (ring/header "Docker-Content-Digest" (prefixed-digest pretty-manifest-str))))
