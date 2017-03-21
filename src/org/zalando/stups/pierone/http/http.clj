@@ -134,6 +134,17 @@
   [& _]
   (ring.util.response/redirect "/ui/"))
 
+(defn set-docker-ping-headers
+  [next-handler]
+  (fn [req]
+    (if (= (:uri req) "/v2/")
+      (let [resp (next-handler req)]
+        (r/header resp "Docker-Distribution-API-Version" "registry/2.0")
+        (if (= 401 (:status resp))
+          (r/header resp "WWW-Authenticate" "Basic realm=\"Pier One Docker Registry\"")
+          resp))
+      (next-handler req))))
+
 (defn start-component
   "Starts the http component."
   [component metrics audit-logger definition resolver-fn]
@@ -160,17 +171,7 @@
                       (s1st/ring mark-transaction)
                       (s1st/parser)
                       (s1st/ring convert-hystrix-exceptions)
-                      (s1st/ring (fn [next-handler]
-                                   (fn [req]
-                                     (locking *out*
-                                       (clojure.pprint/pprint (-> req :swagger :request)))
-                                     (if (= (:uri req) "/v2/")
-                                       (let [resp (next-handler req)]
-                                         (r/header resp "Docker-Distribution-API-Version" "registry/2.0")
-                                         (if (= 401 (:status resp))
-                                           (r/header resp "WWW-Authenticate" "Basic realm=\"Pier One Docker Registry\"")
-                                           resp))
-                                       (next-handler req)))))
+                      (s1st/ring set-docker-ping-headers)
                       (s1st/protector {"iid" (protect/iid-protector configuration)
                                        "oauth2" (protect/oauth2-protector configuration)})
                       (s1st/ring enrich-log-lines)        ; now we also know the user, replace request info
