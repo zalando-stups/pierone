@@ -9,3 +9,5 @@ data/
 scm-source.json
 dev-config.edn
 /credentials
+client.json
+user.json
