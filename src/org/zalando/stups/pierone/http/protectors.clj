@@ -1,33 +1,77 @@
 (ns org.zalando.stups.pierone.http.protectors
   (:require [org.zalando.stups.friboo.system.oauth2 :as oauth2]
             [clj-http.client :as http]
+            [com.netflix.hystrix.core :as hystrix]
             [org.zalando.stups.friboo.log :as log]
             [io.sarnowski.swagger1st.util.api :as api]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:import [com.netflix.hystrix.exception HystrixRuntimeException]))
 
-(defn is-valid-iid?
-  [_ iid iid-sig]
-  (and (= iid "nikolaus") (= iid-sig "password")))
+(defn is-valid-iid-impl
+  "Makes HTTP request to Cluster Registry and returns true if response status is 200.
+  Timeouts are handled by surrounding Hystrix command."
+  [url document signature]
+  (->
+    (http/get url
+      {:basic-auth       [document signature]
+       :throw-exceptions false})
+    :status
+    (= 200)))
 
+(hystrix/defcommand is-valid-iid?
+  [url document signature]
+  :hystrix/fallback-fn (constantly false)
+  :hystrix/group-key :cluster-registry
+  :hystrix/command-key :verify-iid
+  (is-valid-iid-impl url document signature))
+
+(defn- auth-header [req]
+  (get-in req [:headers "authorization"]))
+
+(defn- has-auth-header? [req]
+  (some? (auth-header req)))
+
+(defn- parse-auth-header [header]
+  (str/split header #":"))
+
+(defn- has-well-formed-auth-header? [req]
+  "Auth header is expected to be of form 'user:passwd' after processing
+  by this time (done by http/map-authorization-header)."
+  (let [header (auth-header req)]
+    (and
+      (string? header)
+      (->
+        (parse-auth-header header)
+        count
+        (= 2)))))
 
 (defn- iid-protector-impl
+  "IID protector.
+  IID & its signature are received via Basic Auth header.
+  Sends IID+Sig to Cluster Registry to verify them.
+  Grants access based on Cluster Reg's decision."
   [cluster-reg-url]
-  (fn [req _ _]
-    (if-let [auth-header (get-in req [:headers "authorization"])]
-      (if (string? auth-header)
-        (let [[username password] (str/split auth-header #":")]
+  (fn [req & _]
+    (try
+      (if (and
+            (has-auth-header? req)
+            (has-well-formed-auth-header? req))
+        (let [[username password] (-> req auth-header parse-auth-header)]
           (log/info "Checking IID %s %s" username password)
           (if (not= username "oauth2")
-            ; send to cluster reg
             (if (is-valid-iid? cluster-reg-url username password)
               req
               (do
-                (log/warn "IID is invalid")
+                (log/warn "Invalid IID %s %s" username password)
                 (api/error 401 "Computer says no")))
-            req)))
-      (do
-        (log/warn "No auth header")
-        (api/error 401 "Computer says no")))))
+            ; If username is 'oauth2', this request should be handled
+            ; by the oauth2 protector.
+            req))
+        (api/error 401 ""))
+      ; This is thrown by Hystrix e.g. when it can't enqueue a command.
+      ; We don't know about other excpetions that could occur and don't handle them.
+      (catch HystrixRuntimeException _
+        (api/error 401 "")))))
 
 (defn iid-protector [configuration]
   (if-let [cluster-reg-url (:cluster-registry-url configuration)]
