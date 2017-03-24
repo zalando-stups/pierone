@@ -14,7 +14,7 @@
   (->
     (http/post url
       {:content-type     :json
-       :form-params      {:iid_verification signature}
+       :form-params      {:iid_signature signature}
        :throw-exceptions false})
     :status
     (= 200)))
@@ -53,26 +53,31 @@
   Grants access based on Cluster Reg's decision."
   [cluster-reg-url]
   (fn [req & _]
-    (try
-      (if (and
-            (has-auth-header? req)
-            (has-well-formed-auth-header? req))
+    (cond
+      (not (has-auth-header? req))
+      (api/error 401 "")
+
+      (not (has-well-formed-auth-header? req))
+      (api/error 401 "")
+
+      (not= "instance-identity-document" (-> req auth-header parse-auth-header first))
+      (api/error 401 "")
+
+      :else
+      (try
         (let [[username password] (-> req auth-header parse-auth-header)]
           (log/info "Checking IID %s %s" username password)
-          (if (= username "instance-identity-document")
-            (if (is-valid-iid? cluster-reg-url password)
-              req
-              (do
-                (log/warn "Invalid IID %s %s" username password)
-                (api/error 401 "Computer says no")))
-            ; If username is not 'instance-identity-document', this request should be handled
-            ; by other protectors.
-            req))
-        (api/error 401 ""))
-      ; This is thrown by Hystrix e.g. when it can't enqueue a command.
-      ; We don't know about other excpetions that could occur and don't handle them.
-      (catch HystrixRuntimeException _
-        (api/error 401 "")))))
+          (if (is-valid-iid? cluster-reg-url password)
+            req
+            (do
+              (log/warn "Invalid IID %s %s" username password)
+              (api/error 401 "Computer says no"))))
+        ; This is thrown by Hystrix e.g. when it can't enqueue a command.
+        ; We don't know about other excpetions that could occur and don't handle them.
+        ; One could choose to not handle this Exception and leave it to Swagger1st
+        ; middleware, but this would end up in a 503 status.
+        (catch HystrixRuntimeException _
+          (api/error 401 ""))))))
 
 (defn iid-protector [configuration]
   (if-let [cluster-reg-url (:cluster-registry-url configuration)]
