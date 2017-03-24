@@ -10,20 +10,21 @@
 (defn is-valid-iid-impl
   "Makes HTTP request to Cluster Registry and returns true if response status is 200.
   Timeouts are handled by surrounding Hystrix command."
-  [url document signature]
+  [url signature]
   (->
-    (http/get url
-      {:basic-auth       [document signature]
+    (http/post url
+      {:content-type     :json
+       :form-params      {:iid_verification signature}
        :throw-exceptions false})
     :status
     (= 200)))
 
 (hystrix/defcommand is-valid-iid?
-  [url document signature]
+  [url signature]
   :hystrix/fallback-fn (constantly false)
   :hystrix/group-key :cluster-registry
   :hystrix/command-key :verify-iid
-  (is-valid-iid-impl url document signature))
+  (is-valid-iid-impl url signature))
 
 (defn- auth-header [req]
   (get-in req [:headers "authorization"]))
@@ -58,14 +59,14 @@
             (has-well-formed-auth-header? req))
         (let [[username password] (-> req auth-header parse-auth-header)]
           (log/info "Checking IID %s %s" username password)
-          (if (not= username "oauth2")
-            (if (is-valid-iid? cluster-reg-url username password)
+          (if (= username "instance-identity-document")
+            (if (is-valid-iid? cluster-reg-url password)
               req
               (do
                 (log/warn "Invalid IID %s %s" username password)
                 (api/error 401 "Computer says no")))
-            ; If username is 'oauth2', this request should be handled
-            ; by the oauth2 protector.
+            ; If username is not 'instance-identity-document', this request should be handled
+            ; by other protectors.
             req))
         (api/error 401 ""))
       ; This is thrown by Hystrix e.g. when it can't enqueue a command.

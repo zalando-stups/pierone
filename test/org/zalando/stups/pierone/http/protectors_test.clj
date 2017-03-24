@@ -41,26 +41,34 @@
         (iid-protector-impl (request-with-auth "foobarbaz")) => unauthorized
         (iid-protector-impl (request-with-auth {})) => unauthorized
         (iid-protector-impl (request-with-auth 123)) => unauthorized)
-      (fact "verifies iid with cluster registry if auth header is well-formed and username is not 'oauth2'"
-        (iid-protector-impl (request-with-auth "foo:bar")) => irrelevant
+      (fact "verifies iid with cluster registry if auth header is well-formed and username is 'instance-identity-document'"
+        (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => irrelevant
         (provided
-          (protect/is-valid-iid? registry-url "foo" "bar") => irrelevant :times 1))
-      (fact "returns request if username is 'oauth2'"
+          (protect/is-valid-iid? registry-url "bar") => irrelevant :times 1))
+      (fact "returns request if username is not 'instance-identity-document'"
         (iid-protector-impl .req.) => .req.
         (provided
-          .req. =contains=> {:headers {"authorization" "oauth2:foo"}}))
+          .req. =contains=> (request-with-auth "oauth2:foo")))
       (fact "returns 401 if cluster registry returns a status other than 200"
-        (iid-protector-impl (request-with-auth "foo:bar")) => unauthorized
+        (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => unauthorized
         (provided
-          (protect/is-valid-iid? registry-url "foo" "bar") => false))
+          (protect/is-valid-iid? registry-url "bar") => false))
       (fact "returns request if cluster registry returns 200"
         (iid-protector-impl .req.) => .req.
         (provided
-          .req. =contains=> {:headers {"authorization" "foo:bar"}}
-          (protect/is-valid-iid? registry-url "foo" "bar") => true))
-      (fact "returns 401 if request to cluster registry fails"
-        (iid-protector-impl (request-with-auth "foo:bar")) => unauthorized
+          .req. =contains=> (request-with-auth "instance-identity-document:bar")
+          (protect/is-valid-iid? registry-url "bar") => true))
+      (fact "makes correct request to cluster registry"
+        (iid-protector-impl .req.) => .req.
         (provided
-          .http-opts. =contains=> {:basic-auth ["foo" "bar"]}
-          (http/get registry-url (contains .http-opts.)) =throws=> (new Exception "ARGHH"))))))
+          .req. =contains=> (request-with-auth "instance-identity-document:bar")
+          (http/post registry-url (contains {:form-params {:iid_verification "bar"}})) => {:status 200}))
+      (fact "returns 401 if response from cluster registry is not 200"
+        (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => unauthorized
+        (provided
+          (http/post registry-url (contains {:form-params {:iid_verification "bar"}})) => {:status 404}))
+      (fact "returns 401 if request to cluster registry fails"
+        (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => unauthorized
+        (provided
+          (http/post registry-url irrelevant) =throws=> (new Exception "ARGHH"))))))
 
