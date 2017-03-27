@@ -11,13 +11,16 @@
   "Makes HTTP request to Cluster Registry and returns true if response status is 200.
   Timeouts are handled by surrounding Hystrix command."
   [url signature]
-  (->
-    (http/post url
-      {:content-type     :json
-       :form-params      {:iid_signature signature}
-       :throw-exceptions false})
-    :status
-    (= 200)))
+  (let [{:keys [status body]} (http/post url
+                                         {:content-type     :json
+                                          :form-params      {:iid_signature signature}
+                                          :as               :json
+                                          :throw-exceptions false})]
+    (if (= 200 status)
+      (-> body :verified)
+      (do
+        (log/warn "IID cannot be checked, cluster registry returned status %s" status)
+        false))))
 
 (hystrix/defcommand is-valid-iid?
   [url signature]
@@ -94,7 +97,7 @@
     (do
       (log/info "Checking access tokens against %s." (:tokeninfo-url configuration))
       (oauth2/oauth-2.0 configuration oauth2/check-corresponding-attributes
-        :resolver-fn oauth2/resolve-access-token))
+                        :resolver-fn oauth2/resolve-access-token))
     (do
       (log/warn "No token info URL configured; NOT ENFORCING SECURITY!")
       (oauth2/allow-all))))

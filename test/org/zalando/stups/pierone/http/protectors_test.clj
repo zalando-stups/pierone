@@ -3,8 +3,7 @@
             [midje.sweet :refer :all]
             [org.zalando.stups.friboo.system.oauth2 :as oauth2]
             [org.zalando.stups.pierone.http.protectors :as protect]
-            [clj-http.client :as http])
-  (:import (com.netflix.hystrix.exception HystrixBadRequestException)))
+            [clj-http.client :as http]))
 
 (def registry-url "registry")
 
@@ -21,7 +20,7 @@
   (contains {:status 401}))
 
 (deftest ^:unit test-http-protectors
-  (facts "IIE protector"
+  (facts "IID protector"
 
     (facts "constructor function"
       (fact "when given a config with cluster registry url, it returns a iid protector fn"
@@ -50,12 +49,16 @@
       (fact "returns 401 if cluster registry returns a status other than 200"
         (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => unauthorized
         (provided
-          (protect/is-valid-iid? registry-url "bar") => false))
-      (fact "returns request if cluster registry returns 200"
+          (http/post registry-url (contains {:form-params {:iid_signature "bar"}})) => {:status 404}))
+      (fact "returns 401 if cluster registry returns 200 and contains {'verified': true}"
+        (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => unauthorized
+        (provided
+          (http/post registry-url (contains {:form-params {:iid_signature "bar"}})) => {:status 200 :body {:verified false}}))
+      (fact "returns request if cluster registry returns 200 and contains {'verified': true}"
         (iid-protector-impl .req.) => .req.
         (provided
           .req. =contains=> (request-with-auth "instance-identity-document:bar")
-          (http/post registry-url (contains {:form-params {:iid_signature "bar"}})) => {:status 200}))
+          (http/post registry-url (contains {:form-params {:iid_signature "bar"}})) => {:status 200 :body {:verified true}}))
       (fact "makes correct request to cluster registry"
         (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => irrelevant
         (provided
