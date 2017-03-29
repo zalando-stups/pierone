@@ -50,10 +50,6 @@
         (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => unauthorized
         (provided
           (http/post registry-url (contains {:form-params {:iid_signature "bar"}})) => {:status 404}))
-      (fact "returns 401 if IIDinfo returns 200 and contains {'verified': true}"
-        (iid-protector-impl (request-with-auth "instance-identity-document:bar")) => unauthorized
-        (provided
-          (http/post registry-url (contains {:form-params {:iid_signature "bar"}})) => {:status 200 :body {:verified false}}))
       (fact "returns request if IIDinfo returns 200 and contains {'verified': true}"
         (iid-protector-impl .req.) => .req.
         (provided
