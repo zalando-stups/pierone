@@ -88,17 +88,17 @@
         tags (reduce merge-tag
                      {}
                      db-tags)]
-        (if (empty? tags)
-            tags
-            (let [ ; search for latest tag, e.g. the one that was last created
-                  latest-tag (reduce (fn [tag1 tag2]
-                              (if (t/after? (tcoerce/from-sql-time (:created tag1))
-                                             (tcoerce/from-sql-time (:created tag2)))
-                                   tag1
-                                   tag2))
-                              db-tags)]
-                  (merge-tag tags {:name "latest"
-                                   :image (:image latest-tag)})))))
+       (if (empty? tags)
+           tags
+           (let [ ; search for latest tag, e.g. the one that was last created
+                 latest-tag (reduce (fn [tag1 tag2]
+                                     (if (t/after? (tcoerce/from-sql-time (:created tag1))
+                                                   (tcoerce/from-sql-time (:created tag2)))
+                                         tag1
+                                          tag2))
+                             db-tags)]
+                (merge-tag tags {:name "latest"
+                                 :image (:image latest-tag)})))))
 
 (defn get-tags
   "Get a map of all tags for an artifact with its images. Also includes a 'latest' tag

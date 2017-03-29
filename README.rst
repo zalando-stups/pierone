@@ -95,6 +95,8 @@ You will need a PostgreSQL database (database schemas are created automatically 
     URL to get team membership information by user's UID.
 ``HTTP_TOKENINFO_URL``
     OAuth2 token info URL (e.g. https://example.org/oauth2/tokeninfo). You can leave away this configuration property to disable OAuth authentication.
+``HTTP_IIDINFO_URL``
+    IID info URL for checking AWS Instance Identity Document based authorization. Only is enabled when ``HTTP_TOKENINFO_URL`` is also set.
 ``PGSSLMODE``
     Set to "verify-full" in order to fully verify the Postgres SSL cert.
 ``STORAGE_S3_BUCKET``
@@ -114,6 +116,40 @@ Pier One uses OAuth 2 to protect its resources. The current implementation assum
 * The user's team membership can be looked up in the team service
 * Authenticated users are allowed to pull all Docker images
 * Authenticated users are allowed to push to their team's repository only
+
+As Docker CLI only supports Basic authentication, Pier One uses a special username:
+
+.. code-block::
+
+    oauth2:OAUTH2_TOKEN_GOES_HERE
+
+This string has to be encoded by base64 and put into ``~/.docker/config.json``:
+
+.. code-block:: json
+
+    {
+      "auths": {
+        "pierone.example.org": {
+          "email": "no-mail-required@example.org",
+          "auth": "BASE64_ENCODED_AUTH_STRING"
+        }
+      }
+    }
+
+Additionally, to support image pulling from known AWS EC2 machines, Instance Identity Document (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html)
+ can be used to authenticate instead of OAuth2 token, it also uses a special username:
+
+.. code-block::
+
+    instance-identity-document:MIAGCSqG ... AAAAAAA
+
+The ``MIAG...`` string can be obtained from EC2 instance profile under ``http://169.254.169.254/latest/dynamic/instance-identity/pkcs7``.
+It's not a common use case, but Pier One CLI API can be used to generate ``~/.docker/config.json``:
+
+.. code-block:: bash
+
+    python3 -c "from pierone.api import docker_login_with_iid; docker_login_with_iid('pierone.example.org')"
+
 
 The `Pier One CLI`_ allows configuring the Docker client with the appropriate auth credentials.
 

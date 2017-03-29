@@ -1,5 +1,5 @@
 (ns org.zalando.stups.pierone.api
-  (:require [org.zalando.stups.friboo.system.http :refer [def-http-component]]
+  (:require [org.zalando.stups.pierone.http.http :refer [def-http-component]]
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.ring :as fring]
             [org.zalando.stups.pierone.sql :as sql]

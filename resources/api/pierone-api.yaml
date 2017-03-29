@@ -135,6 +135,9 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/ping
+      security:
+        - oauth2: [uid]
+        - iid:
       responses:
         "200":
           description: v2 is available
@@ -205,6 +208,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v2/head-blob
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
@@ -221,6 +225,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v2/get-blob
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
@@ -260,6 +265,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v2/get-manifest
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
@@ -275,6 +281,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v2/list-tags
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
@@ -300,6 +307,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v2/list-repositories
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       responses:
         "200":
           description: list of repos
@@ -340,6 +348,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v1/search
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: q
           in: query
@@ -382,6 +391,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v1/login
       security:
         - oauth2: [uid]
+        - iid:
       responses:
         "200":
           description: Login successful
@@ -397,6 +407,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v1/get-tags
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: team
           in: path
@@ -421,6 +432,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v1/get-image-for-tag
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: team
           in: path
@@ -529,6 +541,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v1/get-images
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: team
           in: path
@@ -573,6 +586,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v1/get-image-json
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: image
           in: path
@@ -616,6 +630,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v1/get-image-binary
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       produces:
         - application/octet-stream
       parameters:
@@ -656,6 +671,7 @@ paths:
       operationId: org.zalando.stups.pierone.api-v1/get-image-ancestry
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: image
           in: path
@@ -682,6 +698,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/read-teams
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       responses:
         "200":
           description: Return list of team IDs
@@ -699,6 +716,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/read-artifacts
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: team
           in: path
@@ -721,6 +739,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/read-tags
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: team
           in: path
@@ -747,6 +766,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/get-scm-source
       security:         # remove for HTTP_ALLOW_PUBLIC_READ
         - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: team
           in: path
@@ -831,6 +851,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/list-tags-for-image
       security:
         - oauth2: [uid]
+        - iid:
       parameters:
         - name: image
           in: path
@@ -856,6 +877,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/get-overall-stats
       security:
         - oauth2: [uid]
+        - iid:
       responses:
         "200":
           description: Return stats
@@ -871,6 +893,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/get-teams-stats
       security:
         - oauth2: [uid]
+        - iid:
       responses:
         "200":
           description: Return team stats
@@ -886,6 +909,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/get-team-stats
       security:
         - oauth2: [uid]
+        - iid:
       parameters:
         - name: team
           in: path
@@ -900,6 +924,9 @@ paths:
               $ref: "#/definitions/TeamStatistic"
 
 securityDefinitions:
+  iid:
+    type: basic
+    description: Checks IIDs
   oauth2:
     type: oauth2
     flow: implicit

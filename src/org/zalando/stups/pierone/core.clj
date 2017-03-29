@@ -15,7 +15,6 @@
 (defn run
   "Initializes and starts the whole system."
   [default-configuration]
-  (System/setProperty "hystrix.command.default.execution.timeout.enabled" "false")
   (let [configuration (config/load-configuration
                         (system/default-http-namespaces-and :storage :db :api :httplogger :oauth2)
                         [api/default-http-configuration

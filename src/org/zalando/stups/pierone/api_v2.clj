@@ -71,52 +71,10 @@
             [storage image]
             (s/read-data storage image))
 
-(defn ping-unauthorized []
-  (-> (ring/response "Unauthorized")
-      (ring/status 401)
-      (ring/header "WWW-Authenticate" "Basic realm=\"Pier One Docker Registry\"")
-      ; IMPORTANT: we need to set the V2 header here (even for 401 status code!),
-      ; otherwise the Docker client will fallback to V1
-      (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
-
-(defn ping-ok []
-  (-> (ring/response "OK")
-      (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
-
-; TODO: this function was copied from Swagger1st library
-; because the function is not public there :-(
-(defn extract-access-token
-  "Extracts the bearer token from the Authorization header."
-  [request]
-  (if-let [authorization (get-in request [:headers "authorization"])]
-    (when (.startsWith authorization "Bearer ")
-      (.substring authorization (count "Bearer ")))))
-
-(defn is-write-domain
-  "Check whether the current 'Host' (domain) is to push images.
-  This is a workaround for the misbehaving Docker client (see https://github.com/zalando-stups/pierone/issues/57)."
-  [request]
-  (if-let [host (get-in request [:headers "host"])]
-    (.contains host "write")
-    (false)))
-
 (defn ping
   "Checks for compatibility with version 2."
   [_ request _ _ _ _]
-  ; NOTE: we are doing our own OAuth check here as Docker requires an extra V2 header set
-  (let [config (:configuration request)
-        tokeninfo-url (:tokeninfo-url config)
-        allow-public-read (:allow-public-read config)]
-    (if (and tokeninfo-url (or (not allow-public-read) (is-write-domain request)))
-      (if-let [access-token (extract-access-token request)]
-        ; check access token
-        (if-let [tokeninfo (resolve-access-token tokeninfo-url access-token)]
-          (ping-ok)
-          (ping-unauthorized))
-        ; missing access token
-        (ping-unauthorized))
-      ; no tokeninfo URL => no security checks
-      (ping-ok))))
+  (resp "\"OK\"" request))
 
 (defn post-upload
   ""
