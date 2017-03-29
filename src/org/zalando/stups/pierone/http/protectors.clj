@@ -8,24 +8,20 @@
   (:import [com.netflix.hystrix.exception HystrixRuntimeException]))
 
 (defn is-valid-iid-impl
-  "Makes HTTP request to Cluster Registry and returns true if response status is 200.
+  "Makes HTTP request to IIDinfo and returns true if response status is 200.
   Timeouts are handled by surrounding Hystrix command."
   [url signature]
-  (let [{:keys [status body]} (http/post url
+  (let [{:keys [status]} (http/post url
                                          {:content-type     :json
                                           :form-params      {:iid_signature signature}
                                           :as               :json
                                           :throw-exceptions false})]
-    (if (= 200 status)
-      (-> body :verified)
-      (do
-        (log/warn "IID cannot be checked, cluster registry returned status %s" status)
-        false))))
+    (= 200 status)))
 
 (hystrix/defcommand is-valid-iid?
   [url signature]
   :hystrix/fallback-fn (constantly false)
-  :hystrix/group-key :cluster-registry
+  :hystrix/group-key :iidinfo
   :hystrix/command-key :verify-iid
   (is-valid-iid-impl url signature))
 
@@ -52,9 +48,9 @@
 (defn- iid-protector-impl
   "IID protector.
   IID & its signature are received via Basic Auth header.
-  Sends IID+Sig to Cluster Registry to verify them.
-  Grants access based on Cluster Reg's decision."
-  [cluster-reg-url]
+  Sends IID+Sig to IIDinfo to verify them.
+  Grants access based on the decision."
+  [iidinfo-url]
   (fn [req & _]
     (cond
       (not (has-auth-header? req))
@@ -70,7 +66,7 @@
       (try
         (let [[username password] (-> req auth-header parse-auth-header)]
           (log/info "Checking IID %s %s" username password)
-          (if (is-valid-iid? cluster-reg-url password)
+          (if (is-valid-iid? iidinfo-url password)
             req
             (do
               (log/warn "Invalid IID %s %s" username password)
@@ -83,12 +79,12 @@
           (api/error 401 ""))))))
 
 (defn iid-protector [configuration]
-  (if-let [cluster-reg-url (:cluster-registry-url configuration)]
+  (if-let [iidinfo-url (:iidinfo-url configuration)]
     (do
-      (log/info "Checking IIDs against %s." cluster-reg-url)
-      (iid-protector-impl cluster-reg-url))
+      (log/info "Checking IIDs against %s." iidinfo-url)
+      (iid-protector-impl iidinfo-url))
     (do
-      (log/warn "No Cluster Registry URL set, cannot authenticate with IID!")
+      (log/warn "No IIDinfo URL set, cannot authenticate with IID!")
       (oauth2/allow-all))))
 
 
