@@ -46,10 +46,10 @@
   "Returns a new (configured) cheshire CustomPrettyPrinter (which is not thread-safe!)"
   []
   (json/create-pretty-printer
-                           {:indentation                  3
-                            :object-field-value-separator ": "
-                            :indent-arrays?               true
-                            :indent-objects?              true}))
+    {:indentation                  3
+     :object-field-value-separator ": "
+     :indent-arrays?               true
+     :indent-objects?              true}))
 (defn- resp
   "Returns a response including various Docker headers set."
   [body request & {:keys [status binary?]
@@ -64,12 +64,12 @@
         (ring/status status))))
 
 (defcommand store-image
-            [storage image tmp-file]
-            (s/write-data storage image tmp-file))
+  [storage image tmp-file]
+  (s/write-data storage image tmp-file))
 
 (defcommand load-image
-            [storage image]
-            (s/read-data storage image))
+  [storage image]
+  (s/read-data storage image))
 
 (defn ping
   "Checks for compatibility with version 2."
@@ -121,7 +121,7 @@
          :user  (get-in request [:tokeninfo "uid"])}
         {:connection db})
       (catch SQLException e
-        (if (seq (sql/image-blob-exists {:image digest} {:connection db}))
+        (if (seq (sql/cmd-image-blob-exists {:image digest} {:connection db}))
           (log/info "Image already exists: %s" image-ident)
           (throw e))))
     (store-image storage digest upload-file)
@@ -130,7 +130,7 @@
       (try
         (sql/create-scm-source-data! (assoc scm-source :image digest) {:connection db})
         (catch SQLException e
-          (when-not (seq (sql/image-blob-exists {:image digest} {:connection db}))
+          (when-not (seq (sql/cmd-image-blob-exists {:image digest} {:connection db}))
             (throw e)))))
     (log/info "Stored new image %s." image-ident)))
 
@@ -157,7 +157,7 @@
   (let [image-ident (str team "/" artifact "/" digest)]
     ; TODO: file might be uploaded on PUT too
 
-    (let [updated-rows (sql/accept-image-blob! {:image digest} {:connection db})]
+    (let [updated-rows (sql/cmd-accept-image-blob! {:image digest} {:connection db})]
       (if (pos? updated-rows)
         (do
           (log/info "Accepted image %s." image-ident)
@@ -169,7 +169,7 @@
 (defn head-blob
   "Check whether image (FS layer) exists."
   [{:keys [digest]} request db _ _ _]
-  (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
+  (if-let [size (:size (first (sql/cmd-get-blob-size {:image digest} {:connection db})))]
     (-> (resp "OK" request)
         (ring/header "Docker-Content-Digest" digest)
         (ring/header "Content-Length" size))
@@ -178,7 +178,7 @@
 (defn get-blob
   "Reads the binary data of an image."
   [{:keys [digest]} request db storage _ _]
-  (if-let [size (:size (first (sql/get-blob-size {:image digest} {:connection db})))]
+  (if-let [size (:size (first (sql/cmd-get-blob-size {:image digest} {:connection db})))]
     (let [data (load-image storage digest)]
       (-> (resp data request :binary? true)
           (ring/header "Docker-Content-Digest" digest)
@@ -211,10 +211,22 @@
 (defn prefixed-digest [text]
   (str "sha256:" (digest/sha-256 text)))
 
+(defn update-scm-source [db image-id x-scm-source]
+  (when x-scm-source
+    (let [{:keys [author url revision status]} (json/parse-string x-scm-source keyword)
+          scm-source-data-params {:image    image-id
+                                  :author   author
+                                  :url      url
+                                  :revision revision
+                                  :status   status}]
+      (sql/cmd-create-or-update-scm-source-data! scm-source-data-params {:connection db}))))
+
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload (docker push) sequence."
-  [{:keys [team artifact name data]} request db _ api-config {:keys [log-fn]}]
+  [{:keys [team artifact name data x-scm-source]} request db _ api-config {:keys [log-fn]}]
   (auth/require-write-access team request)
+  (when x-scm-source
+    (auth/require-trusted-write-access request))
   (let [manifest (read-manifest data)
         tokeninfo (:tokeninfo request)
         uid (get tokeninfo "uid")
@@ -242,15 +254,16 @@
     (when-not (seq fs-layers)
       (api/throw-error 400 "manifest has no FS layers"))
     (doseq [digest fs-layers]
-      (when-not (seq (sql/image-blob-exists {:image digest} {:connection db}))
+      (when-not (seq (sql/cmd-image-blob-exists {:image digest} {:connection db}))
         (api/throw-error 400 (str "image blob " digest " does not exist"))))
     (if (= "latest" name)
       (resp "tag latest is not allowed" request :status 409)
       (try
         ;; Wrap in a transaction together with putting SQS messages
         (jdbc/with-db-transaction [tr db]
-          (sql/create-manifest! params-with-user
-                                {:connection tr})
+          (sql/cmd-create-manifest! params-with-user {:connection tr})
+          ;; Override top layer's SCM source data
+          (update-scm-source tr digest x-scm-source)
           (let [queue-region (:clair-layer-push-queue-region api-config)
                 queue-url (:clair-layer-push-queue-url api-config)]
             (if (some str/blank? [queue-region queue-url])
@@ -260,19 +273,19 @@
                 (clair/send-sqs-message queue-region queue-url clair-sqs-messages)))))
         (log/info "Stored new tag %s." tag-ident)
         ; write audit log
-        (let [tag-info {:team team
+        (let [tag-info {:team     team
                         :artifact artifact
-                        :tag name}
-              scm-source (first (sql/get-scm-source
+                        :tag      name}
+              scm-source (first (sql/cmd-get-scm-source
                                   tag-info
                                   {:connection db}))]
           (log-fn
             (audit/tag-uploaded
               tokeninfo
               scm-source
-              {:team team
-               :artifact artifact
-               :tag name
+              {:team       team
+               :artifact   artifact
+               :tag        name
                :repository (:repository api-config)})))
         (-> (resp "OK" request :status 201)
             (ring/header "Docker-Content-Digest" content-digest))
@@ -280,7 +293,7 @@
         ; TODO check for hystrix exception and replace sql above with cmd- version
         (catch SQLException e
           (if (.endsWith name "-SNAPSHOT")
-            (let [updated-rows (sql/update-manifest! params-with-user {:connection db})]
+            (let [updated-rows (sql/cmd-update-manifest! params-with-user {:connection db})]
               (if (pos? updated-rows)
                 (do
                   (log/info "Updated snapshot tag %s." tag-ident)
@@ -296,9 +309,9 @@
   "Loads manifest as string from the DB, resolves `latest` tag automatically"
   [{:keys [team artifact name]} db]
   (when-let [real-name (if (= "latest" name)
-                         (:name (first (sql/get-latest {:team team :artifact artifact} {:connection db})))
+                         (:name (first (sql/cmd-get-latest {:team team :artifact artifact} {:connection db})))
                          name)]
-    (:manifest (first (sql/get-manifest {:team team :artifact artifact :name real-name} {:connection db})))))
+    (:manifest (first (sql/cmd-get-manifest {:team team :artifact artifact :name real-name} {:connection db})))))
 
 (defn adjust-manifest
   "To provide compatibility with Docker 1.13, transform config.mediaType"
@@ -329,11 +342,11 @@
 (defn list-tags
   "get"
   [{:keys [team artifact] :as parameters} request db _ _ _]
-  (let [tags (map :name (sql/list-tag-names parameters {:connection db}))]
+  (let [tags (map :name (sql/cmd-list-tag-names parameters {:connection db}))]
     (resp {:name (str team "/" artifact) :tags tags} request)))
 
 (defn list-repositories
   "get"
   [_ request db _ _ _]
-  (let [repos (map :name (sql/list-repositories {} {:connection db}))]
+  (let [repos (map :name (sql/cmd-list-repositories {} {:connection db}))]
     (resp {:repositories repos} request)))

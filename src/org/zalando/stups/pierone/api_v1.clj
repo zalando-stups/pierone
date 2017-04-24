@@ -129,13 +129,13 @@
     (if (= "latest" tag-name)
       (resp "tag latest is not allowed" request :status 409)
       (try
-        (sql/create-tag! params-with-user connection)
+        (sql/cmd-create-tag! params-with-user connection)
         (log/info "Stored new tag %s." params-with-user)
         (let [tag-info {:team team
                         :artifact artifact
                         :tag name
                         :repository (:repository api-config)}
-              scm-source (first (sql/get-scm-source
+              scm-source (first (sql/cmd-get-scm-source
                                   tag-info
                                   {:connection db}))]
           (log-fn (audit/tag-uploaded (:tokeninfo request) scm-source tag-info)))
@@ -171,8 +171,8 @@
   "Stores an image's JSON metadata. First call in upload sequence."
   [{:keys [image metadata]} request db _ _ _]
   (try
-    (sql/delete-unaccepted-image! {:image image} {:connection db})
-    (sql/create-image!
+    (sql/cmd-delete-unaccepted-image! {:image image} {:connection db})
+    (sql/cmd-create-image!
       {:image    image
        :metadata (json/generate-string metadata)
        :parent   (get metadata "parent")

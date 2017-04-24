@@ -63,8 +63,9 @@
 (defn wipe-db
   [system]
   (println "Deleting all tags and images")
-  (jdbc/delete! (:db system) :tags ["t_name IS NOT NULL"])
-  (jdbc/delete! (:db system) :images ["i_id IS NOT NULL"])
+  (jdbc/delete! (:db system) :scm_source_data ["true"])
+  (jdbc/delete! (:db system) :tags ["true"])
+  (jdbc/delete! (:db system) :images ["true"])
   system)
 
 ; setup

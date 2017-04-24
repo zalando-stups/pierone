@@ -113,7 +113,7 @@
        :severity-no-fix-available (or (find-highest-severity noFixAvailable) "clair:NoCVEsFound")})))
 
 (defn store-clair-summary [db {:keys [clair-id severity-fix-available severity-no-fix-available]}]
-  (sql/update-tag-severity! {:clair_id                  clair-id
+  (sql/cmd-update-tag-severity! {:clair_id                  clair-id
                              :severity_fix_available    severity-fix-available
                              :severity_no_fix_available severity-no-fix-available} {:connection db}))
 

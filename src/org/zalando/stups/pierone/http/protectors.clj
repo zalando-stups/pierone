@@ -12,10 +12,10 @@
   Timeouts are handled by surrounding Hystrix command."
   [url signature]
   (let [{:keys [status]} (http/post url
-                                         {:content-type     :json
-                                          :form-params      {:iid_signature signature}
-                                          :as               :json
-                                          :throw-exceptions false})]
+                                    {:content-type     :json
+                                     :form-params      {:iid_signature signature}
+                                     :as               :json
+                                     :throw-exceptions false})]
     (= 200 status)))
 
 (hystrix/defcommand is-valid-iid?

@@ -250,6 +250,10 @@ paths:
         - $ref: '#/parameters/team'
         - $ref: '#/parameters/artifact'
         - $ref: '#/parameters/name'
+        - name: x-scm-source
+          in: header
+          type: string
+          required: false
         - name: data
           in: body
           schema:
