@@ -30,6 +30,6 @@
     (fact "calls require-auth"
       (auth/require-write-access "team" request) => (throws Exception)
       (provided
-        (auth/cached-require-auth request "team") => (throws Exception))))
+        (auth/cached-require-auth request "team") =throws=> (Exception.))))
 
   )
