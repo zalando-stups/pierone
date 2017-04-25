@@ -17,7 +17,8 @@
             [com.netflix.hystrix.core :refer [defcommand]]
             [org.zalando.stups.pierone.storage :as s]
             [clojure.java.jdbc :as jdbc]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [ring.util.codec :as ruc])
   (:import (java.sql SQLException)
            (java.util UUID)
            (java.io File)
@@ -213,7 +214,7 @@
 
 (defn update-scm-source [db image-id x-scm-source]
   (when x-scm-source
-    (let [{:keys [author url revision status]} (json/parse-string x-scm-source keyword)
+    (let [{:keys [author url revision status]} (json/parse-string (ruc/url-decode x-scm-source) keyword)
           scm-source-data-params {:image    image-id
                                   :author   author
                                   :url      url

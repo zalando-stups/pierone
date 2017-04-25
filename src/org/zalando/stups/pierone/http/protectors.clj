@@ -65,7 +65,7 @@
       :else
       (try
         (let [[username password] (-> req auth-header parse-auth-header)]
-          (log/info "Checking IID %s %s" username password)
+          ;(log/info "Checking IID %s %s" username password)
           (if (is-valid-iid? iidinfo-url password)
             req
             (do
