@@ -135,7 +135,7 @@
                         :artifact artifact
                         :tag name
                         :repository (:repository api-config)}
-              scm-source (first (sql/get-scm-source
+              scm-source (first (sql/cmd-get-scm-source
                                   tag-info
                                   {:connection db}))]
           (log-fn (audit/tag-uploaded (:tokeninfo request) scm-source tag-info)))

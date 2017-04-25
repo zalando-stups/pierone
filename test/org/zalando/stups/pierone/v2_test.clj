@@ -33,8 +33,8 @@
         (v2/get-fs-layers "manifest") => ["digest"]
         (clair/prepare-hashes-for-clair "manifest") => []
         (jdbc/db-transaction* nil anything) => nil
-        (sql/get-scm-source {:team "team" :artifact "artifact" :tag "name"} {:connection nil}) => {}
-        (sql/image-blob-exists {:image "digest"} {:connection nil}) => [0 1 2]
+        (sql/cmd-get-scm-source {:team "team" :artifact "artifact" :tag "name"} {:connection nil}) => {}
+        (sql/cmd-image-blob-exists {:image "digest"} {:connection nil}) => [0 1 2]
         (auth/require-write-access "team" request) => nil))
     (fact "patch-upload"
       (let [file (new File "foo")]
@@ -49,7 +49,7 @@
     (fact "put-upload"
       (v2/put-upload params request nil nil nil nil) => truthy
       (provided
-        (sql/accept-image-blob! {:image "digest"} {:connection nil}) => 0
+        (sql/cmd-accept-image-blob! {:image "digest"} {:connection nil}) => 0
         (auth/require-write-access "team" request) => nil))
     (fact "post-upload"
       (v2/post-upload params request nil nil nil nil) => truthy

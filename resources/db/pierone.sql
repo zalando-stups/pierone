@@ -74,6 +74,21 @@ SELECT ssd_url AS url,
 ORDER BY created DESC
  LIMIT 1;
 
+-- name: create-or-update-scm-source-data!
+WITH scm_source_data_update AS (
+     UPDATE scm_source_data
+        SET ssd_url = :url,
+            ssd_revision = :revision,
+            ssd_author = :author,
+            ssd_status = :status
+      WHERE ssd_image_id = :image
+  RETURNING ssd_image_id
+)
+INSERT INTO scm_source_data
+       (ssd_image_id, ssd_url, ssd_revision, ssd_author, ssd_status)
+     SELECT :image, :url, :revision, :author, :status
+      WHERE NOT EXISTS (SELECT 1 FROM scm_source_data_update);
+
 -- name: get-total-storage
 SELECT SUM(i_size) AS total
   FROM images

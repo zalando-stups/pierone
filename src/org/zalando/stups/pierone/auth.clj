@@ -24,10 +24,16 @@
   ; either user has write access to all (service user)
   ; or user belongs to a team (employee user)
   (when (get-in request [:configuration :tokeninfo-url])
-    (when-not (some #{"application.write_all"} (get tokeninfo "scope"))
+    (when-not (some #{"application.write_all" "application.write_all_trusted"} (get tokeninfo "scope"))
       (user/require-realms #{"services" "employees"} request)
       (case (get tokeninfo "realm")
         "/services" (do
                       (require-scope request "application.write")
                       (cached-require-auth request team))
         "/employees" (cached-require-auth request team)))))
+
+(defn require-trusted-write-access
+  "Require trusted write access to any repository"
+  [request]
+  (when (get-in request [:configuration :tokeninfo-url])
+    (require-scope request "application.write_all_trusted")))
