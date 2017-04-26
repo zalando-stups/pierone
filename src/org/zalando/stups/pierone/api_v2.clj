@@ -214,13 +214,17 @@
 
 (defn update-scm-source [db image-id x-scm-source]
   (when x-scm-source
-    (let [{:keys [author url revision status]} (json/parse-string (ruc/url-decode x-scm-source) keyword)
-          scm-source-data-params {:image    image-id
-                                  :author   author
-                                  :url      url
-                                  :revision revision
-                                  :status   status}]
-      (sql/cmd-create-or-update-scm-source-data! scm-source-data-params {:connection db}))))
+    (try
+      (let [{:keys [author url revision status]} (json/parse-string (ruc/url-decode x-scm-source) keyword)
+            scm-source-data-params {:image    image-id
+                                    :author   author
+                                    :url      url
+                                    :revision revision
+                                    :status   status}]
+        (sql/cmd-create-or-update-scm-source-data! scm-source-data-params {:connection db}))
+      (catch Exception e
+        (log/warn "Failed to override SCM information from X-SCM-Source header %s because of %s" x-scm-source (str e))
+        (throw e)))))
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload (docker push) sequence."
