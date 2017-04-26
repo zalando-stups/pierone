@@ -11,7 +11,8 @@
             [com.stuartsierra.component :as component]
             [org.zalando.stups.pierone.clair :as clair]
             [org.zalando.stups.friboo.system.oauth2 :as oauth2]
-            [clojure.java.jdbc :as jdbc])
+            [clojure.java.jdbc :as jdbc]
+            [cheshire.core :as json])
   (:import (java.io File)))
 
 (def request {:configuration {:tokeninfo-url "token.info"}
@@ -26,6 +27,17 @@
 
 (deftest ^:unit v2-unit-test
   (facts "calls require-write-access with correct params"
+    (facts "about update-scm-source"
+      (fact "Parses header contents and puts it into the DB"
+        (v2/update-scm-source ..db.. ..image.. (json/generate-string {:author "a" :url "u" :revision "r" :status "s"})) => nil
+        (provided
+          (sql/cmd-create-or-update-scm-source-data!
+            {:image ..image.. :author "a" :url "u" :revision "r" :status "s"} {:connection ..db..})
+          => nil))
+      (fact "When header content is invalid, throws, but logs a WARN"
+        (v2/update-scm-source ..db.. ..image.. "(foo") => (throws Exception)
+        (provided
+          (sql/cmd-create-or-update-scm-source-data! anything anything) => nil :times 0)))
     (fact "put-manifest"
       (v2/put-manifest params request nil nil nil {:log-fn identity}) => truthy
       (provided
