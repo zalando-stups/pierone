@@ -15,5 +15,3 @@ commit:
   message:
     patterns: # commit message has to match any one of
       - ".+" # Any non-empty message
-
-X-Zalando-Team: stups
