@@ -23,7 +23,8 @@
 
   :plugins [[lein-cloverage "1.0.6"]
             [io.sarnowski/lein-docker "1.1.0"]
-            [org.zalando.stups/lein-scm-source "0.2.0"]]
+            [org.zalando.stups/lein-scm-source "0.2.0"]
+            [lein-set-version "0.4.1"]]
 
   :docker {:image-name #=(eval (str (some-> (System/getenv "DEFAULT_DOCKER_REGISTRY")
                                             (str "/"))
