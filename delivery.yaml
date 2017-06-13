@@ -1,0 +1,32 @@
+build_steps:
+- desc: Install dependencies
+  cmd: |
+    # OpenJDK
+    apt-get update
+    apt-get install -y openjdk-8* python3-pip bats
+    # Leiningen
+    curl https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein >/usr/bin/lein
+    chmod a+x /usr/bin/lein
+    # Docker
+    apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+    apt-key fingerprint 0EBFCD88
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    apt-get update
+    apt-get install -y docker-ce
+- desc: Run unit tests
+  cmd: |
+    export LEIN_ROOT=1
+    docker run -d -p 5432:5432 postgres:9.4
+    DB_SUBNAME=//localhost:5432/postgres lein test
+- desc: Build and push docker image
+  cmd: |
+    export LEIN_ROOT=1
+    # TODO remove scm-source.json from Dockerfile first
+    touch scm-source.json
+    lein set-version "${CDP_BUILD_VERSION}"
+    lein uberjar
+    docker build -t pierone.stups.zalan.do/stups/pierone:${CDP_BUILD_VERSION} .
+    docker push pierone.stups.zalan.do/stups/pierone:${CDP_BUILD_VERSION}
+    docker tag pierone.stups.zalan.do/stups/pierone:${CDP_BUILD_VERSION} registry-write.opensource.zalan.do/stups/pierone:${CDP_BUILD_VERSION}
+    docker push registry-write.opensource.zalan.do/stups/pierone:${CDP_BUILD_VERSION}
