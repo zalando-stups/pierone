@@ -33,7 +33,7 @@ build_steps:
     else
       IMAGE_NAME=pierone-test
     fi
-    docker build -t pierone.stups.zalan.do/stups/pierone:${CDP_BUILD_VERSION} .
-    docker push pierone.stups.zalan.do/stups/pierone:${CDP_BUILD_VERSION}
-    docker tag pierone.stups.zalan.do/stups/pierone:${CDP_BUILD_VERSION} registry-write.opensource.zalan.do/stups/pierone:${CDP_BUILD_VERSION}
-    docker push registry-write.opensource.zalan.do/stups/pierone:${CDP_BUILD_VERSION}
+    docker build -t pierone.stups.zalan.do/stups/${IMAGE_NAME}:${CDP_BUILD_VERSION} .
+    docker push pierone.stups.zalan.do/stups/${IMAGE_NAME}:${CDP_BUILD_VERSION}
+    docker tag pierone.stups.zalan.do/stups/${IMAGE_NAME}:${CDP_BUILD_VERSION} registry-write.opensource.zalan.do/stups/${IMAGE_NAME}:${CDP_BUILD_VERSION}
+    docker push registry-write.opensource.zalan.do/stups/${IMAGE_NAME}:${CDP_BUILD_VERSION}
