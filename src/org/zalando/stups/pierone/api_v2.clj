@@ -72,10 +72,14 @@
   [storage image]
   (s/read-data storage image))
 
+(defn ping-ok []
+  (-> (ring/response "OK")
+      (ring/header "Docker-Distribution-API-Version" "registry/2.0")))
+
 (defn ping
   "Checks for compatibility with version 2."
   [_ request _ _ _ _]
-  (resp "\"OK\"" request))
+  (ping-ok))
 
 (defn post-upload
   ""
