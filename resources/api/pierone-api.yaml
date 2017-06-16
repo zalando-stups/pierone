@@ -135,9 +135,13 @@ paths:
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/ping
-      security:
-        - oauth2: [uid]
-        - iid:
+      # GET /v2/ must be protected, this is how docker CLI determines whether to inject Authorization header
+      #  in subsequent calls
+      # However, it is handled inside org.zalando.stups.pierone.api-v2/ping because for public read mode
+      #  we need to decide based on the hostname (registry.opensource.zalan.do or registry-write.opensource.zalan.do)
+#      security:
+#        - oauth2: [uid]
+#        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       responses:
         "200":
           description: v2 is available
@@ -855,7 +859,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/list-tags-for-image
       security:
         - oauth2: [uid]
-        - iid:
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: image
           in: path
@@ -881,7 +885,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/get-overall-stats
       security:
         - oauth2: [uid]
-        - iid:
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       responses:
         "200":
           description: Return stats
@@ -897,7 +901,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/get-teams-stats
       security:
         - oauth2: [uid]
-        - iid:
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       responses:
         "200":
           description: Return team stats
@@ -913,7 +917,7 @@ paths:
       operationId: org.zalando.stups.pierone.api/get-team-stats
       security:
         - oauth2: [uid]
-        - iid:
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
       parameters:
         - name: team
           in: path
