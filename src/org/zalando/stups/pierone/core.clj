@@ -9,7 +9,8 @@
             [org.zalando.stups.pierone.sql :as sql]
             [org.zalando.stups.pierone.clair :as clair]
             [org.zalando.stups.pierone.storage :as storage]
-            [com.stuartsierra.component :as component])
+            [com.stuartsierra.component :as component]
+            [org.zalando.stups.pierone.lib.nrepl :as nrepl])
   (:gen-class))
 
 (defn run
@@ -39,11 +40,40 @@
                                        :db (sql/map->DB {:configuration (:db configuration)}))]
     (system/run configuration system)))
 
+;; Running system (when started from -main)
+;; During development please use user/system
+(defonce system nil)
+
+(defn stop []
+  (when system
+    (let [stopped-system (component/stop system)]
+      (alter-var-root #'system (constantly stopped-system)))))
+
+(defn start
+  ([]
+   (start {}))
+  ([override-env]
+   (with-redefs [environ.core/env (merge environ.core/env override-env)]
+     (let [started-system (run {})]
+       (alter-var-root #'system (constantly started-system))))))
+
+(defn restart
+  ([]
+   (restart {}))
+  ([override-env]
+   (stop)
+   (start override-env)))
+
 (defn -main
   "The actual main for our uberjar."
   [& args]
   (try
-    (run {})
+    (nrepl/start-nrepl)
+    (start)
     (catch Exception e
       (log/error e "Could not start system because of %s." (str e))
       (System/exit 1))))
+
+(comment
+  ;; Restart the app while overriding some of the env vars
+  (restart {}))
