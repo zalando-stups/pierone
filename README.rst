@@ -101,6 +101,10 @@ You will need a PostgreSQL database (database schemas are created automatically 
     Set to "verify-full" in order to fully verify the Postgres SSL cert.
 ``STORAGE_S3_BUCKET``
     Only for S3 backend: the Amazon S3 bucket name.
+``NREPL_ENABLED``
+    Set to ``true`` to start NREPL server before starting the application. Default is ``false``.
+``NREPL_PORT``
+    Specify the port for NREPL server. Default is random port.
 
 See the `STUPS Installation Guide section on Pier One`_ for details about deploying Pier One into your AWS account.
 
