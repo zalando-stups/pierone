@@ -27,6 +27,7 @@ build_steps:
     fi
     PRIVATE_IMAGE=pierone.stups.zalan.do/stups/${IMAGE_NAME}:${CDP_BUILD_VERSION}
     OPENSOURCE_IMAGE=registry-write.opensource.zalan.do/stups/${IMAGE_NAME}:${CDP_BUILD_VERSION}
+    touch scm-source.json
     docker build -t "$PRIVATE_IMAGE" .
     docker push "$PRIVATE_IMAGE"
     docker tag "$PRIVATE_IMAGE" "$OPENSOURCE_IMAGE"
