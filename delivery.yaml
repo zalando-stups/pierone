@@ -21,9 +21,7 @@ build_steps:
     lein set-version "${CDP_BUILD_VERSION}"
     lein uberjar
     touch target/scm-source.json
-    IS_PR_BUILD=${CDP_PULL_REQUEST_NUMBER+"true"}
-    if [[ $CDP_TARGET_BRANCH == "master" && ${IS_PR_BUILD} != "true" ]]
-    then
+    if [ -z "$CDP_PULL_REQUEST_NUMBER" ]; then
       IMAGE_NAME=pierone
     else
       IMAGE_NAME=pierone-test
