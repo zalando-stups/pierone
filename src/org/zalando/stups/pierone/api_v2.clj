@@ -236,27 +236,29 @@
   (let [schema-version (:schemaVersion manifest)]
     (condp = schema-version
       1 (map :blobSum (:fsLayers manifest))
-      2 (apply conj
-               [(get-in manifest [:config :digest])]
-               (map :digest (:layers manifest)))
+      2 (into [(get-in manifest [:config :digest])]
+              (reverse (map :digest (:layers manifest))))
       ; else
       (api/throw-error 400 (str "manifest schema version not compatible with this API: " schema-version)))))
 
 (defn prefixed-digest [text]
   (str "sha256:" (digest/sha-256 text)))
 
-(defn update-scm-source [db image-id x-scm-source]
+(defn insert-scm-source-by-tag [db team artifact name x-scm-source]
+  {:pre [team artifact name]}
   (when x-scm-source
     (try
       (let [{:keys [author url revision status]} (json/parse-string (ruc/url-decode x-scm-source) keyword)
-            scm-source-data-params {:image    image-id
-                                    :author   author
-                                    :url      url
-                                    :revision revision
-                                    :status   status}]
-        (sql/cmd-create-or-update-scm-source-data! scm-source-data-params {:connection db}))
+            params {:team     team
+                    :artifact artifact
+                    :name     name
+                    :author   author
+                    :url      url
+                    :revision revision
+                    :status   status}]
+        (sql/cmd-insert-scm-source-data-by-tag! params {:connection db}))
       (catch Exception e
-        (log/warn "Failed to override SCM information from X-SCM-Source header %s because of %s" x-scm-source (str e))
+        (log/warn "Failed to save SCM information from X-SCM-Source header %s because of %s" x-scm-source (str e))
         (throw e)))))
 
 (defn put-manifest
@@ -301,7 +303,7 @@
         (jdbc/with-db-transaction [tr db]
           (sql/cmd-create-manifest! params-with-user {:connection tr})
           ;; Override top layer's SCM source data
-          (update-scm-source tr digest x-scm-source)
+          (insert-scm-source-by-tag tr team artifact name x-scm-source)
           (let [queue-region (:clair-layer-push-queue-region api-config)
                 queue-url (:clair-layer-push-queue-url api-config)]
             (if (some str/blank? [queue-region queue-url])
