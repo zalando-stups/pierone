@@ -15,7 +15,6 @@ ENV HTTP_PORT 8080
 COPY run.sh /
 
 COPY target/pierone.jar /
-COPY target/scm-source.json /
 
 COPY resources/ /resources/
 
