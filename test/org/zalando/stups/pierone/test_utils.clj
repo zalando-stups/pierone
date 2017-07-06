@@ -62,7 +62,8 @@
 
 (defn wipe-db
   [system]
-  (println "Deleting all tags and images")
+  (println "Wiping all tables")
+  (jdbc/delete! (:db system) :scm_source_data_by_tag ["true"])
   (jdbc/delete! (:db system) :scm_source_data ["true"])
   (jdbc/delete! (:db system) :tags ["true"])
   (jdbc/delete! (:db system) :images ["true"])
