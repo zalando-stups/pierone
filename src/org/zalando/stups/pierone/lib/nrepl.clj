@@ -32,7 +32,8 @@
 (defonce nrepl-server nil)
 
 (defn run-nrepl []
-  (let [config (config/load-configuration [:nrepl] {})]
+  ;; :nrepl-bind defaults to "::", which might not be supported in some environments
+  (let [config (config/load-configuration [:nrepl] [{:nrepl-bind "0.0.0.0"}])]
     (when (-> config :nrepl :enabled)
       (let [nrepl (map->NREPL {:configuration (:nrepl config)})]
         (component/start nrepl)))))
