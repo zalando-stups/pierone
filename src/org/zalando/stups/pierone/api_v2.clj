@@ -9,7 +9,6 @@
             [org.zalando.stups.pierone.audit :as audit]
             [cheshire.core :as json]
             [amazonica.aws.sns :as sns]
-            [amazonica.aws.cloudformation :as cf]
             [digest]
             [ring.util.response :as ring]
             [org.zalando.stups.pierone.sql :as sql]
@@ -261,22 +260,14 @@
         (log/warn "Failed to override SCM information from X-SCM-Source header %s because of %s" x-scm-source (str e))
         (throw e)))))
 
-(defn publish-to-sns [{:keys [sns-region sns-stack-name repository]} team image tag]
+(defn publish-to-sns [{:keys [sns-region sns-topic-arn repository]} team image tag]
   (try
-    (let [topic-arn (-> (cf/describe-stack-resources {:endpoint sns-region} :stack-name sns-stack-name)
-                        :stack-resources
-                        first
-                        :physical-resource-id)
-          msg       (json/generate-string {"registry" repository
-                                           "team"     team
-                                           "image"    image
-                                           "tag"      tag})
-          message   {"default" msg
-                     "https"   msg}]
-      (sns/publish
-        {:endpoint sns-region}
-        :topic-arn topic-arn
-        :message message))
+    (sns/publish {:endpoint sns-region}
+                 :topic-arn sns-topic-arn
+                 :message (json/generate-string {"registry" repository
+                                                 "team"     team
+                                                 "image"    image
+                                                 "tag"      tag}))
     (catch Exception e
       (log/warn "Publishing to SNS topic failed: %s" (str e)))))
 
