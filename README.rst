@@ -107,8 +107,8 @@ You will need a PostgreSQL database (database schemas are created automatically 
     Specify the port for NREPL server. Default is random port.
 ``API_SNS_REGION``
     SNS topic region (notifications on pushed tags)
-``API_SNS_STACK_NAME``
-    SNS topic stack name (notifications on pushed tags)
+``API_SNS_TOPIC_ARN``
+    SNS topic arn (notifications on pushed tags)
 
 See the `STUPS Installation Guide section on Pier One`_ for details about deploying Pier One into your AWS account.
 
