@@ -261,15 +261,16 @@
         (throw e)))))
 
 (defn publish-to-sns [{:keys [sns-region sns-topic-arn repository]} team image tag]
-  (try
-    (sns/publish {:endpoint sns-region}
-                 :topic-arn sns-topic-arn
-                 :message (json/generate-string {"registry" repository
-                                                 "team"     team
-                                                 "image"    image
-                                                 "tag"      tag}))
-    (catch Exception e
-      (log/warn "Publishing to SNS topic failed: %s" (str e)))))
+  (when sns-topic-arn
+    (try
+      (sns/publish {:endpoint sns-region}
+                   :topic-arn sns-topic-arn
+                   :message (json/generate-string {"registry" repository
+                                                   "team"     team
+                                                   "image"    image
+                                                   "tag"      tag}))
+      (catch Exception e
+        (log/warn "Publishing to SNS topic failed: %s" (str e))))))
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload (docker push) sequence."
