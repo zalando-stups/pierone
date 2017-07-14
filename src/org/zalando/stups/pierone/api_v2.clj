@@ -8,6 +8,7 @@
             [org.zalando.stups.pierone.clair :as clair]
             [org.zalando.stups.pierone.audit :as audit]
             [cheshire.core :as json]
+            [amazonica.aws.sns :as sns]
             [digest]
             [ring.util.response :as ring]
             [org.zalando.stups.pierone.sql :as sql]
@@ -96,8 +97,8 @@
   "Checks for compatibility with version 2."
   [_ request _ _ _ _]
   ; NOTE: we are doing our own OAuth check here as Docker requires an extra V2 header set
-  (let [config (:configuration request)
-        tokeninfo-url (:tokeninfo-url config)
+  (let [config            (:configuration request)
+        tokeninfo-url     (:tokeninfo-url config)
         allow-public-read (:allow-public-read config)]
     (if (and tokeninfo-url (or (not allow-public-read) (is-write-domain request)))
       (if-let [access-token (#'io.sarnowski.swagger1st.util.security/extract-access-token request)]
@@ -135,9 +136,9 @@
 
 (defn compute-digest [file]
   (let [algorithm "SHA-256"
-        prefix (.replaceAll (.toLowerCase algorithm) "-" "")
-        bufsize 16384
-        md (MessageDigest/getInstance algorithm)]
+        prefix    (.replaceAll (.toLowerCase algorithm) "-" "")
+        bufsize   16384
+        md        (MessageDigest/getInstance algorithm)]
     (with-open [in (io/input-stream file)]
       (let [ba (byte-array bufsize)]
         (loop [n (.read in ba 0 bufsize)]
@@ -175,7 +176,7 @@
   (let [^File upload-file (get-upload-file storage team artifact uuid)]
     (io/copy data upload-file)
     (let [digest (compute-digest upload-file)
-          size (.length upload-file)]
+          size   (.length upload-file)]
       (create-image team artifact digest upload-file request db storage)
       (io/delete-file upload-file true)
       (-> (ring/response "")
@@ -261,36 +262,48 @@
         (log/warn "Failed to save SCM information from X-SCM-Source header %s because of %s" x-scm-source (str e))
         (throw e)))))
 
+(defn publish-to-sns [{:keys [sns-region sns-topic-arn repository]} team image tag]
+  (when sns-topic-arn
+    (try
+      (sns/publish {:endpoint sns-region}
+                   :topic-arn sns-topic-arn
+                   :message (json/generate-string {"registry" repository
+                                                   "team"     team
+                                                   "image"    image
+                                                   "tag"      tag}))
+      (catch Exception e
+        (log/warn "Publishing %s to SNS topic failed: %s" [repository team image tag] (str e))))))
+
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload (docker push) sequence."
   [{:keys [team artifact name data x-scm-source]} request db _ api-config {:keys [log-fn]}]
   (auth/require-write-access team request)
   (when x-scm-source
     (auth/require-trusted-write-access request))
-  (let [manifest (read-manifest data)
-        tokeninfo (:tokeninfo request)
-        uid (get tokeninfo "uid")
-        fs-layers (get-fs-layers manifest)
-        clair-hashes (clair/prepare-hashes-for-clair manifest)
+  (let [manifest               (read-manifest data)
+        tokeninfo              (:tokeninfo request)
+        uid                    (get tokeninfo "uid")
+        fs-layers              (get-fs-layers manifest)
+        clair-hashes           (clair/prepare-hashes-for-clair manifest)
         topmost-layer-clair-id (-> clair-hashes last :current :clair-id)
-        registry (:callback-url api-config)
-        clair-sqs-messages (map (partial clair/create-sqs-message registry team artifact) clair-hashes)
-        digest (first fs-layers)
+        registry               (:callback-url api-config)
+        clair-sqs-messages     (map (partial clair/create-sqs-message registry team artifact) clair-hashes)
+        digest                 (first fs-layers)
         ;; For integration tests, data is only readable once, and pretty-manifest-str is always:
         ;;  "Some org.eclipse.jetty.server.HttpInputOverHTTP. Content omitted."
         ;; However, mysteriously in normal runs it's ok
-        pretty-manifest-str (json/encode data {:pretty (get-json-pretty-printer)})
-        content-digest (prefixed-digest pretty-manifest-str)
-        params-with-user {:team           team
-                          :artifact       artifact
-                          :name           name
-                          :image          digest
-                          :manifest       (json/generate-string manifest {:pretty true})
-                          :fs_layers      fs-layers
-                          :user           uid
-                          :clair_id       topmost-layer-clair-id
-                          :content_digest content-digest}
-        tag-ident (str team "/" artifact ":" name)]
+        pretty-manifest-str    (json/encode data {:pretty (get-json-pretty-printer)})
+        content-digest         (prefixed-digest pretty-manifest-str)
+        params-with-user       {:team           team
+                                :artifact       artifact
+                                :name           name
+                                :image          digest
+                                :manifest       (json/generate-string manifest {:pretty true})
+                                :fs_layers      fs-layers
+                                :user           uid
+                                :clair_id       topmost-layer-clair-id
+                                :content_digest content-digest}
+        tag-ident              (str team "/" artifact ":" name)]
     (when-not (seq fs-layers)
       (api/throw-error 400 "manifest has no FS layers"))
     (doseq [digest fs-layers]
@@ -305,17 +318,20 @@
           ;; Override top layer's SCM source data
           (insert-scm-source-by-tag tr team artifact name x-scm-source)
           (let [queue-region (:clair-layer-push-queue-region api-config)
-                queue-url (:clair-layer-push-queue-url api-config)]
+                queue-url    (:clair-layer-push-queue-url api-config)]
             (if (some str/blank? [queue-region queue-url])
               (log/warn "No API_CLAIR_PUSH_LAYER_QUEUE_REGION or API_CLAIR_PUSH_LAYER_QUEUE_URL, not submitting to Clair.")
               (do
                 (log/info "Submitting image to Clair: %s" topmost-layer-clair-id)
                 (clair/send-sqs-message queue-region queue-url clair-sqs-messages)))))
         (log/info "Stored new tag %s." tag-ident)
+
+        (publish-to-sns api-config team artifact name)
+
         ; write audit log
-        (let [tag-info {:team     team
-                        :artifact artifact
-                        :tag      name}
+        (let [tag-info   {:team     team
+                          :artifact artifact
+                          :tag      name}
               scm-source (first (sql/cmd-get-scm-source
                                   tag-info
                                   {:connection db}))]
@@ -366,14 +382,14 @@
   "get"
   [parameters request db _ _ _]
   (if-let [manifest (load-manifest parameters db)]
-    (let [parsed-manifest (adjust-manifest (json/decode manifest))
-          schema-version (get parsed-manifest "schemaVersion")
+    (let [parsed-manifest     (adjust-manifest (json/decode manifest))
+          schema-version      (get parsed-manifest "schemaVersion")
           pretty-manifest-str (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
-          set-header-fn #(condp = schema-version
-                           1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
-                           2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
-                           (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
-                           %)]
+          set-header-fn       #(condp = schema-version
+                                 1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
+                                 2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
+                                 (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
+                                 %)]
       (-> (resp pretty-manifest-str request)
           (set-header-fn)
           (ring/header "Docker-Content-Digest" (prefixed-digest pretty-manifest-str))))
