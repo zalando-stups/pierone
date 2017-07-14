@@ -66,12 +66,12 @@
         (ring/status status))))
 
 (defcommand store-image
-            [storage image tmp-file]
-            (s/write-data storage image tmp-file))
+  [storage image tmp-file]
+  (s/write-data storage image tmp-file))
 
 (defcommand load-image
-            [storage image]
-            (s/read-data storage image))
+  [storage image]
+  (s/read-data storage image))
 
 (defn ping-unauthorized []
   (-> (ring/response "Unauthorized")
@@ -270,7 +270,7 @@
                                                    "image"    image
                                                    "tag"      tag}))
       (catch Exception e
-        (log/warn "Publishing to SNS topic failed: %s" (str e))))))
+        (log/warn "Publishing %s to SNS topic failed: %s" [repository team image tag] (str e))))))
 
 (defn put-manifest
   "Stores an image's JSON metadata. Last call in upload (docker push) sequence."
