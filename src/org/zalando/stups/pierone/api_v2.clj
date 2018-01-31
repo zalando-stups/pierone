@@ -69,6 +69,10 @@
   [storage image tmp-file]
   (s/write-data storage image tmp-file))
 
+(defcommand get-image-url
+  [storage image]
+  (s/get-url storage image))
+
 (defcommand load-image
   [storage image]
   (s/read-data storage image))
@@ -214,12 +218,14 @@
   "Reads the binary data of an image."
   [{:keys [digest]} request db storage _ _]
   (if-let [size (:size (first (sql/cmd-get-blob-size {:image digest} {:connection db})))]
-    (let [data (load-image storage digest)]
-      (-> (resp data request :binary? true)
-          (ring/header "Docker-Content-Digest" digest)
-          (ring/header "Content-Length" size)
-          ; layers are already GZIP compressed!
-          (ring/header "Content-Encoding" "identity")))
+    (if (s/external? storage)
+      (ring/redirect (get-image-url storage digest) 307)
+      (let [data (load-image storage digest)]
+        (-> (resp data request :binary? true)
+            (ring/header "Docker-Content-Digest" digest)
+            (ring/header "Content-Length" size)
+            ; layers are already GZIP compressed!
+            (ring/header "Content-Encoding" "identity"))))
     (resp (get-error-response :BLOB_UNKNOWN {"Digest" digest}) request :status 404)))
 
 (defn read-manifest
