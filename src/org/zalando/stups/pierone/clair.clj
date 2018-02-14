@@ -121,7 +121,7 @@
   (try
     (sqs/receive-message {:endpoint queue-region} :queue-url queue-url :wait-time-seconds 5 :max-number-of-messages 10)
     (catch Exception e
-      (log/error e "Error caught during queue polling. %s" {:queue-region queue-region :queue-url queue-url})
+      (log/warn "Error caught during queue polling. %s: %s" {:queue-region queue-region :queue-url queue-url} (str e))
       (Thread/sleep 5000)
       {:messages []})))
 
@@ -130,7 +130,6 @@
     (when-let [layer (extract-clair-layer body)]
       (let [summary (process-clair-layer layer)]
         (store-clair-summary db summary)
-        (log/info "Updated layer severity info: %s" summary)
         true))
     (catch [:type ::decode-base64gzip-error] _
       (log/error (:throwable &throw-context)

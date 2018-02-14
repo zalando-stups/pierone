@@ -147,7 +147,7 @@ paths:
           description: v2 is available
   /v2/{team}/{artifact}/blobs/uploads/:
     post:
-      summary: start upload
+      summary: start upload (first step of docker push)
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/post-upload
@@ -267,7 +267,7 @@ paths:
         "200":
           description: OK
     get:
-      summary: get manifest
+      summary: get manifest (first step of docker pull)
       tags:
         - Docker Registry API v2
       operationId: org.zalando.stups.pierone.api-v2/get-manifest
