@@ -130,7 +130,6 @@
     (when-let [layer (extract-clair-layer body)]
       (let [summary (process-clair-layer layer)]
         (store-clair-summary db summary)
-        ;(log/info "Updated layer severity info: %s" summary)
         true))
     (catch [:type ::decode-base64gzip-error] _
       (log/error (:throwable &throw-context)
