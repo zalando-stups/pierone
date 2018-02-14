@@ -384,31 +384,33 @@
                 "application/vnd.docker.container.image.v1+json")
       manifest)))
 
-(defn get-manifest
-  "get"
+(defn get-manifest "Start of docker pull, returns image metadata (a.k.a. manifest)"
   [parameters request db _ _ _]
-  (if-let [manifest (load-manifest parameters db)]
-    (let [parsed-manifest     (adjust-manifest (json/decode manifest))
-          schema-version      (get parsed-manifest "schemaVersion")
-          pretty-manifest-str (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
-          set-header-fn       #(condp = schema-version
-                                 1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
-                                 2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
-                                 (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
-                                 %)]
-      (-> (resp pretty-manifest-str request)
-          (set-header-fn)
-          (ring/header "Docker-Content-Digest" (prefixed-digest pretty-manifest-str))))
-    (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))
+  (let [{:keys [team artifact name]} parameters
+        pretty-name (str team "/" artifact ":" name)]
+    (if-let [manifest (load-manifest parameters db)]
+      (let [parsed-manifest (adjust-manifest (json/decode manifest))
+            schema-version (get parsed-manifest "schemaVersion")
+            pretty-manifest-str (json/encode parsed-manifest {:pretty (get-json-pretty-printer)})
+            set-header-fn #(condp = schema-version
+                             1 (ring/content-type % "application/vnd.docker.distribution.manifest.v1+prettyjws")
+                             2 (ring/content-type % "application/vnd.docker.distribution.manifest.v2+json")
+                             (api/throw-error 400 (str "manifest schema version not supported: " schema-version))
+                             %)]
+        (log/info "docker pull: %s" pretty-name)
+        (-> (resp pretty-manifest-str request)
+            (set-header-fn)
+            (ring/header "Docker-Content-Digest" (prefixed-digest pretty-manifest-str))))
+      (do
+        (log/info "docker pull: manifest not found: %s" pretty-name)
+        (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))))
 
 (defn list-tags
-  "get"
   [{:keys [team artifact] :as parameters} request db _ _ _]
   (let [tags (map :name (sql/cmd-list-tag-names parameters {:connection db}))]
     (resp {:name (str team "/" artifact) :tags tags} request)))
 
 (defn list-repositories
-  "get"
   [_ request db _ _ _]
   (let [repos (map :name (sql/cmd-list-repositories {} {:connection db}))]
     (resp {:repositories repos} request)))
