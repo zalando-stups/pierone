@@ -41,7 +41,15 @@
       (r/conpath clair-url "/v1/layers/" clair-id))))
 
 (defn assoc-clair-link [tags-result clair-url]
-  (assoc tags-result :clair_details (get-clair-link tags-result clair-url)))
+  (-> tags-result
+      (assoc :clair_details (get-clair-link tags-result clair-url))))
+
+(defn overwrite-severities-with-nil-when-clair-url-is-not-set [tags-result clair-url]
+  (if (str/blank? clair-url)
+    (-> tags-result
+        (assoc :severity_fix_available nil)
+        (assoc :severity_no_fix_available nil))
+    tags-result))
 
 (defn read-tags
   "Lists all tags of an artifact."
@@ -52,9 +60,10 @@
         ; this check is sufficient because an artifact cannot exist without a tag.
         ; if we have no results, then either team or artifact do not exist
         (->> result
-            (map #(assoc-clair-link % clair-url))
-            ring/response
-            fring/content-type-json)
+             (map #(assoc-clair-link % clair-url))
+             (map #(overwrite-severities-with-nil-when-clair-url-is-not-set % clair-url))
+             ring/response
+             fring/content-type-json)
         (ring/not-found nil))))
 
 (defn get-scm-source
