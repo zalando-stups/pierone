@@ -281,6 +281,21 @@ paths:
       responses:
         "200":
           description: OK
+    head:
+      summary: check for existing image manifest
+      tags:
+        - Docker Registry API v2
+      operationId: org.zalando.stups.pierone.api-v2/head-manifest
+      security:         # remove for HTTP_ALLOW_PUBLIC_READ
+        - oauth2: [uid] # remove for HTTP_ALLOW_PUBLIC_READ
+        - iid:          # remove for HTTP_ALLOW_PUBLIC_READ
+      parameters:
+        - $ref: '#/parameters/team'
+        - $ref: '#/parameters/artifact'
+        - $ref: '#/parameters/name'
+      responses:
+        "200":
+          description: OK
   /v2/{team}/{artifact}/tags/list:
     get:
       summary: list tags

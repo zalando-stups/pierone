@@ -212,6 +212,9 @@
         (is (= "application/vnd.docker.container.image.v1+json"
                (get-in response [:body :config :mediaType]))))
 
+      (expect 200
+              (client/head (u/v2-url "/myteam/myart/manifests/2.0-SNAPSHOT")
+                           (u/http-opts)))
 
       ; stop
       (component/stop system))))
