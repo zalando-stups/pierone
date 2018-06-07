@@ -405,6 +405,19 @@
         (log/info "docker pull: manifest not found: %s" pretty-name)
         (resp (get-error-response :MANIFEST_UNKNOWN {"Parameters" parameters}) request :status 404)))))
 
+(defn head-manifest
+  "Check whether image metadata (a.k.a. manifest) exists."
+  [parameters request db _ _ _]
+  (if-let [manifest (load-manifest parameters db)]
+    (let [parsed-manifest (adjust-manifest (json/decode manifest))
+          size (get-in parsed-manifest ["config", "size"])
+          digest (get-in parsed-manifest ["config", "digest"])]
+      (-> (resp "OK" request)
+          (ring/header "Docker-Content-Digest" digest)
+          (ring/header "Content-Length" size)))
+    (do
+      (resp "manifest not found" request :status 404))))
+
 (defn list-tags
   [{:keys [team artifact] :as parameters} request db _ _ _]
   (let [tags (map :name (sql/cmd-list-tag-names parameters {:connection db}))]
